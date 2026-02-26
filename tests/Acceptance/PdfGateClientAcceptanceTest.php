@@ -113,6 +113,19 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertSame('from_html', $document->getType());
     }
 
+    public function testGetFileReturnsPdfStream(): void
+    {
+        $stream = self::$client->getFile(self::$documentId);
+
+        self::assertIsResource($stream);
+        $binary = stream_get_contents($stream);
+        fclose($stream);
+
+        self::assertIsString($binary);
+        self::assertNotSame('', $binary);
+        self::assertStringStartsWith('%PDF-', $binary);
+    }
+
     public function testAuthFailureBehaviorReturnsApiException(): void
     {
         $client = new PdfGateClient('test_invalid_key');

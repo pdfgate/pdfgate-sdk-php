@@ -6,6 +6,7 @@ namespace PdfGate;
 
 use PdfGate\Dto\PdfGateDocumentMetadata;
 use PdfGate\Exception\InvalidConfigurationException;
+use PdfGate\Exception\TransportException;
 use PdfGate\Http\ApiRequestHandler;
 use PdfGate\Http\CurlHttpTransport;
 use PdfGate\Http\HttpTransportInterface;
@@ -151,6 +152,35 @@ class PdfGateClient
         );
 
         return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
+     * Retrieves a generated PDF file as a readable stream resource.
+     *
+     * @param string $documentId Generated document identifier.
+     * @return resource
+     */
+    public function getFile(string $documentId)
+    {
+        if (trim($documentId) === '') {
+            throw new InvalidConfigurationException('Document ID cannot be empty.');
+        }
+
+        $body = $this->requestHandler->getBinaryResponse('/file/' . rawurlencode($documentId));
+        $stream = fopen('php://temp', 'w+b');
+
+        if ($stream === false) {
+            throw new TransportException('Failed to initialize in-memory stream for file download.');
+        }
+
+        if (fwrite($stream, $body) === false) {
+            fclose($stream);
+            throw new TransportException('Failed to write downloaded file into stream.');
+        }
+
+        rewind($stream);
+
+        return $stream;
     }
 
     private function resolveBaseUrl(string $apiKey): string

@@ -156,6 +156,18 @@ $client->getDocument(
 );
 ```
 
+### Get File
+
+```php
+$stream = $client->getFile($id);
+$output = fopen('output.pdf', 'wb');
+stream_copy_to_stream($stream, $output);
+fclose($output);
+fclose($stream);
+```
+
+To download generated files, enable **Save files for one month** in PDFGate Dashboard settings (disabled by default).
+
 ## Error handling
 
 Non-2xx responses throw `PdfGate\Exception\ApiException` with:

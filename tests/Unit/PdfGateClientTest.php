@@ -304,6 +304,81 @@ final class PdfGateClientTest extends TestCase
         }
     }
 
+    public function testGetFileReturnsRewoundReadableStreamAndUsesFilePath(): void
+    {
+        $binaryBody = $this->successfulPdfBinaryBody();
+        $transport = new RecordingTransport(new HttpResponse(200, $binaryBody));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $stream = $client->getFile('doc_123');
+
+        self::assertIsResource($stream);
+        self::assertSame('stream', get_resource_type($stream));
+        self::assertSame($binaryBody, stream_get_contents($stream));
+        fclose($stream);
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->method);
+        self::assertSame('/file/doc_123', parse_url($request->url, PHP_URL_PATH));
+        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
+        self::assertSame('https://api-sandbox.pdfgate.com/file/doc_123', $request->url);
+    }
+
+    public function testGetFileUsesProductionBaseUrlForLiveApiKey(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulPdfBinaryBody()));
+        $client = PdfGateClient::createWithTransport('live_key_123', $transport);
+
+        $stream = $client->getFile('doc_live');
+        fclose($stream);
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('https://api.pdfgate.com/file/doc_live', $request->url);
+    }
+
+    public function testGetFileRejectsEmptyDocumentId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulPdfBinaryBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('Document ID cannot be empty.');
+
+        $client->getFile('   ');
+    }
+
+    public function testGetFileNon2xxResponsesThrowApiException(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(404, 'missing'));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        try {
+            $client->getFile('missing_doc');
+            self::fail('Expected ApiException was not thrown.');
+        } catch (ApiException $e) {
+            self::assertSame(404, $e->getStatusCode());
+            self::assertStringContainsString('missing', $e->getMessage());
+        }
+    }
+
+    public function testGetFileTransportFailuresAreWrappedWithOriginalCause(): void
+    {
+        $previous = new RuntimeException('socket failure');
+        $transport = new ThrowingTransport($previous);
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        try {
+            $client->getFile('doc_123');
+            self::fail('Expected TransportException was not thrown.');
+        } catch (TransportException $e) {
+            self::assertSame($previous, $e->getPrevious());
+            self::assertStringContainsString('GET https://api-sandbox.pdfgate.com/file/doc_123', $e->getMessage());
+            self::assertStringContainsString('RuntimeException: socket failure', $e->getMessage());
+        }
+    }
+
     private function successfulGenerateResponseBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","type":"from_html","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z"}';
@@ -322,6 +397,11 @@ final class PdfGateClientTest extends TestCase
     private function successfulGetDocumentResponseWithoutTypeBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z"}';
+    }
+
+    private function successfulPdfBinaryBody(): string
+    {
+        return "%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\n";
     }
 }
 
