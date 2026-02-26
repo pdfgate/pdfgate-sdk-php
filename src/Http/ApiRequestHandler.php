@@ -51,8 +51,32 @@ class ApiRequestHandler
             ->withPath($path)
             ->withQuery([])
             ->build();
-        $request = new HttpRequest(
-            'POST',
+        $request = HttpRequest::makePostJson(
+            $url,
+            $this->authHeaders(),
+            $payload
+        );
+
+        $response = $this->send($request);
+
+        return $this->decodeJsonResponse($response->body);
+    }
+
+    /**
+     * Sends a multipart/form-data POST request and parses a JSON response.
+     *
+     * @param string $path Endpoint path.
+     * @param array<string,mixed> $payload multipart/form-data payload.
+     * @return array<string,mixed>
+     */
+    public function postMultipartJsonResponse(string $path, array $payload): array
+    {
+        $url = (new UrlBuilder())
+            ->withDomain($this->baseUrl)
+            ->withPath($path)
+            ->withQuery([])
+            ->build();
+        $request = HttpRequest::makePostMultipart(
             $url,
             $this->authHeaders(),
             $payload

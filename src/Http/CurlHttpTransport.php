@@ -34,6 +34,14 @@ class CurlHttpTransport implements HttpTransportInterface
         $headers = $request->headers;
         $headerList = array();
 
+        if ($request->jsonBody !== null && $request->multipartBody !== null) {
+            if (PHP_VERSION_ID < 80000) {
+                $this->curlClient->close($ch);
+            }
+
+            throw new RuntimeException('HTTP request cannot contain both JSON and multipart body.');
+        }
+
         if ($request->jsonBody !== null) {
             $json = json_encode($request->jsonBody);
 
@@ -47,6 +55,16 @@ class CurlHttpTransport implements HttpTransportInterface
 
             $headers['Content-Type'] = 'application/json';
             if ($this->curlClient->setOpt($ch, CURLOPT_POSTFIELDS, $json) === false) {
+                if (PHP_VERSION_ID < 80000) {
+                    $this->curlClient->close($ch);
+                }
+
+                throw new RuntimeException('Failed to set cURL option CURLOPT_POSTFIELDS.');
+            }
+        }
+
+        if ($request->multipartBody !== null) {
+            if ($this->curlClient->setOpt($ch, CURLOPT_POSTFIELDS, $request->multipartBody) === false) {
                 if (PHP_VERSION_ID < 80000) {
                     $this->curlClient->close($ch);
                 }

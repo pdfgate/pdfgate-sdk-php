@@ -71,6 +71,52 @@ final class ApiRequestHandlerTest extends TestCase
             self::assertStringContainsString('bad request', $e->getMessage());
         }
     }
+
+    public function testPostMultipartJsonResponseSendsMultipartPayloadAndAuthHeader(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_123"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $handler->postMultipartJsonResponse('/watermark/pdf', array(
+            'documentId' => 'source_123',
+            'type' => 'text',
+            'text' => 'watermark',
+            'jsonResponse' => true,
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('POST', $request->method);
+        self::assertSame('https://api.pdfgate.com/watermark/pdf', $request->url);
+        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
+        self::assertSame(null, $request->jsonBody);
+        self::assertSame('source_123', $request->multipartBody['documentId']);
+        self::assertSame('text', $request->multipartBody['type']);
+        self::assertSame('watermark', $request->multipartBody['text']);
+        self::assertSame(true, $request->multipartBody['jsonResponse']);
+    }
+
+    public function testPostMultipartJsonResponseDecodesJsonObjectResponse(): void
+    {
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            new StaticResponseTransport(new HttpResponse(200, '{"id":"6642381c5c61","status":"completed"}'))
+        );
+
+        $result = $handler->postMultipartJsonResponse('/watermark/pdf', array(
+            'documentId' => 'source_123',
+            'type' => 'text',
+            'text' => 'watermark',
+        ));
+
+        self::assertSame('6642381c5c61', $result['id']);
+        self::assertSame('completed', $result['status']);
+    }
 }
 
 final class StaticResponseTransport implements HttpTransportInterface
@@ -85,6 +131,27 @@ final class StaticResponseTransport implements HttpTransportInterface
 
     public function send(HttpRequest $request): HttpResponse
     {
+        return $this->response;
+    }
+}
+
+final class RecordingResponseTransport implements HttpTransportInterface
+{
+    /** @var HttpResponse */
+    private $response;
+
+    /** @var HttpRequest|null */
+    public $lastRequest;
+
+    public function __construct(HttpResponse $response)
+    {
+        $this->response = $response;
+        $this->lastRequest = null;
+    }
+
+    public function send(HttpRequest $request): HttpResponse
+    {
+        $this->lastRequest = $request;
         return $this->response;
     }
 }

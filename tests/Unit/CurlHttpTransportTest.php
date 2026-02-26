@@ -21,7 +21,11 @@ final class CurlHttpTransportTest extends TestCase
         $transport = new CurlHttpTransport($curl);
 
         $response = $transport->send(
-            new HttpRequest('POST', 'https://api.pdfgate.com/v1/generate/pdf', array('Authorization' => 'Bearer x'))
+            HttpRequest::makePostJson(
+                'https://api.pdfgate.com/v1/generate/pdf',
+                array('Authorization' => 'Bearer x'),
+                null
+            )
         );
 
         self::assertSame(201, $response->statusCode);
@@ -39,8 +43,7 @@ final class CurlHttpTransportTest extends TestCase
         $transport = new CurlHttpTransport($curl);
 
         $transport->send(
-            new HttpRequest(
-                'POST',
+            HttpRequest::makePostJson(
                 'https://api.pdfgate.com/v1/generate/pdf',
                 array('Authorization' => 'Bearer x'),
                 array('html' => '<p>Hello</p>')
@@ -49,6 +52,31 @@ final class CurlHttpTransportTest extends TestCase
 
         self::assertSame('{"html":"<p>Hello<\/p>"}', $curl->postFields);
         self::assertContains('Content-Type: application/json', $curl->setOptArrayOptions[CURLOPT_HTTPHEADER]);
+    }
+
+    public function testSendSupportsMultipartPayloadWithoutJsonContentType(): void
+    {
+        $curl = new FakeCurlClient();
+        $curl->execResult = '{}';
+        $curl->infoResult = 200;
+
+        $transport = new CurlHttpTransport($curl);
+        $multipartPayload = array(
+            'documentId' => 'doc_123',
+            'type' => 'image',
+            'watermark' => new \CURLFile('/tmp/watermark.png'),
+        );
+
+        $transport->send(
+            HttpRequest::makePostMultipart(
+                'https://api.pdfgate.com/watermark/pdf',
+                array('Authorization' => 'Bearer x'),
+                $multipartPayload
+            )
+        );
+
+        self::assertSame($multipartPayload, $curl->postFields);
+        self::assertNotContains('Content-Type: application/json', $curl->setOptArrayOptions[CURLOPT_HTTPHEADER]);
     }
 
     public function testSendThrowsWhenCurlInitFails(): void
@@ -61,7 +89,7 @@ final class CurlHttpTransportTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Failed to initialize cURL.');
 
-        $transport->send(new HttpRequest('GET', 'https://api.pdfgate.com/v1/generate/pdf'));
+        $transport->send(HttpRequest::makePostJson('https://api.pdfgate.com/v1/generate/pdf'));
     }
 
     public function testSendThrowsWhenJsonEncodingFails(): void
@@ -76,8 +104,7 @@ final class CurlHttpTransportTest extends TestCase
         $this->expectExceptionMessage('Failed to encode request JSON body.');
 
         $transport->send(
-            new HttpRequest(
-                'POST',
+            HttpRequest::makePostJson(
                 'https://api.pdfgate.com/v1/generate/pdf',
                 array(),
                 array('bad' => "\xB1\x31")
@@ -96,7 +123,7 @@ final class CurlHttpTransportTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('cURL request failed: connection failed');
 
-        $transport->send(new HttpRequest('GET', 'https://api.pdfgate.com/v1/generate/pdf'));
+        $transport->send(HttpRequest::makePostJson('https://api.pdfgate.com/v1/generate/pdf'));
     }
 
     public function testSendThrowsWhenSettingPostFieldsFails(): void
@@ -110,8 +137,7 @@ final class CurlHttpTransportTest extends TestCase
         $this->expectExceptionMessage('Failed to set cURL option CURLOPT_POSTFIELDS.');
 
         $transport->send(
-            new HttpRequest(
-                'POST',
+            HttpRequest::makePostJson(
                 'https://api.pdfgate.com/v1/generate/pdf',
                 array(),
                 array('html' => '<p>Hello</p>')
@@ -129,8 +155,9 @@ final class CurlHttpTransportTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Failed to set cURL request options.');
 
-        $transport->send(new HttpRequest('GET', 'https://api.pdfgate.com/v1/generate/pdf'));
+        $transport->send(HttpRequest::makePostJson('https://api.pdfgate.com/v1/generate/pdf'));
     }
+
 }
 
 final class FakeCurlClient implements CurlClientInterface
@@ -150,7 +177,7 @@ final class FakeCurlClient implements CurlClientInterface
     /** @var array<int,mixed> */
     public $setOptArrayOptions = array();
 
-    /** @var string|null */
+    /** @var mixed */
     public $postFields = null;
 
     /** @var bool */
@@ -167,7 +194,7 @@ final class FakeCurlClient implements CurlClientInterface
     public function setOpt($handle, int $option, $value): bool
     {
         if ($option === CURLOPT_POSTFIELDS) {
-            $this->postFields = (string) $value;
+            $this->postFields = $value;
         }
 
         return $this->setOptResult;
