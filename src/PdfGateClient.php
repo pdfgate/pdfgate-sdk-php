@@ -15,6 +15,7 @@ use PdfGate\Http\HttpTransportInterface;
  *
  * @phpstan-import-type GeneratePdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type FlattenPdfRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type CompressPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ProtectPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ExtractPdfFormDataRequestPayload from \PdfGate\Type\Types
  */
@@ -87,6 +88,21 @@ class PdfGateClient
         $request['jsonResponse'] = true;
 
         $response = $this->requestHandler->postJsonResponse('/forms/flatten', $request);
+
+        return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
+     * Compresses an existing PDF document.
+     *
+     * @param CompressPdfRequestPayload $request Compress PDF request payload.
+     * @return PdfGateDocumentMetadata
+     */
+    public function compressPdf(array $request): PdfGateDocumentMetadata
+    {
+        $request['jsonResponse'] = true;
+
+        $response = $this->requestHandler->postJsonResponse('/compress/pdf', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }

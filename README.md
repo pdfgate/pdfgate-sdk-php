@@ -98,6 +98,19 @@ $client->flattenPdf(
 );
 ```
 
+### Compress PDF
+
+```php
+$client->compressPdf(
+    [
+        'documentId' => $id,
+        'linearize' => true,
+        'preSignedUrlExpiresIn' => 1200,
+        'metadata' => ['source' => 'sdk'],
+    ]
+);
+```
+
 ### Protect PDF
 
 ```php

@@ -57,6 +57,12 @@ namespace PdfGate\Type;
  *   preSignedUrlExpiresIn?: int,
  *   metadata?: array<string,mixed>
  * }
+ * @phpstan-type CompressPdfRequestPayload array{
+ *   documentId: string,
+ *   linearize?: bool,
+ *   preSignedUrlExpiresIn?: int,
+ *   metadata?: array<string,mixed>
+ * }
  * @phpstan-type ProtectPdfRequestPayload array{
  *   documentId: string,
  *   algorithm?: ProtectPdfAlgorithm,

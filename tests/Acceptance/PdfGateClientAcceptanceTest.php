@@ -58,6 +58,20 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertSame(self::$documentId, $flattened->getDerivedFrom());
     }
 
+    public function testCompressPdfReturnsDocumentMetadata(): void
+    {
+        $compressed = self::$client->compressPdf(array(
+            'documentId' => self::$documentId,
+            'linearize' => true,
+            'metadata' => array('suite' => 'acceptance-compress'),
+        ));
+
+        self::assertNotSame('', $compressed->getId());
+        self::assertSame('completed', $compressed->getStatus());
+        self::assertSame('compressed', $compressed->getType());
+        self::assertSame(self::$documentId, $compressed->getDerivedFrom());
+    }
+
     public function testProtectPdfReturnsDocumentMetadata(): void
     {
         $protected = self::$client->protectPdf(array(
