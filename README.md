@@ -98,6 +98,25 @@ $client->flattenPdf(
 );
 ```
 
+### Protect PDF
+
+```php
+$client->protectPdf(
+    [
+        'documentId' => $id,
+        'algorithm' => 'AES256', // API default is AES256 if omitted
+        'ownerPassword' => 'ownerPassword',
+        'userPassword' => 'userPassword',
+        'disablePrint' => true,
+        'disableCopy' => true,
+        'disableEditing' => true,
+        'encryptMetadata' => false,
+        'preSignedUrlExpiresIn' => 1200,
+        'metadata' => ['source' => 'sdk'],
+    ]
+);
+```
+
 ### Extract PDF Form Data
 
 ```php

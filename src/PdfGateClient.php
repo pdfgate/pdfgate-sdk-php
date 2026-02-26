@@ -15,6 +15,7 @@ use PdfGate\Http\HttpTransportInterface;
  *
  * @phpstan-import-type GeneratePdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type FlattenPdfRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type ProtectPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ExtractPdfFormDataRequestPayload from \PdfGate\Type\Types
  */
 class PdfGateClient
@@ -86,6 +87,21 @@ class PdfGateClient
         $request['jsonResponse'] = true;
 
         $response = $this->requestHandler->postJsonResponse('/forms/flatten', $request);
+
+        return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
+     * Protects an existing PDF document with encryption and permission restrictions.
+     *
+     * @param ProtectPdfRequestPayload $request Protect PDF request payload.
+     * @return PdfGateDocumentMetadata
+     */
+    public function protectPdf(array $request): PdfGateDocumentMetadata
+    {
+        $request['jsonResponse'] = true;
+
+        $response = $this->requestHandler->postJsonResponse('/protect/pdf', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }

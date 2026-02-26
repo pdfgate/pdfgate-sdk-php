@@ -20,6 +20,7 @@ namespace PdfGate\Type;
  *   ignoreFailingChains: bool,
  *   chains: list<ClickSelectorChainPayload>
  * }
+ * @phpstan-type ProtectPdfAlgorithm 'AES256'|'AES128'
  * @phpstan-type GeneratePdfRequestPayload array{
  *   html?: string,
  *   url?: string,
@@ -53,6 +54,18 @@ namespace PdfGate\Type;
  * }
  * @phpstan-type FlattenPdfRequestPayload array{
  *   documentId: string,
+ *   preSignedUrlExpiresIn?: int,
+ *   metadata?: array<string,mixed>
+ * }
+ * @phpstan-type ProtectPdfRequestPayload array{
+ *   documentId: string,
+ *   algorithm?: ProtectPdfAlgorithm,
+ *   userPassword?: string,
+ *   ownerPassword?: string,
+ *   disablePrint?: bool,
+ *   disableCopy?: bool,
+ *   disableEditing?: bool,
+ *   encryptMetadata?: bool,
  *   preSignedUrlExpiresIn?: int,
  *   metadata?: array<string,mixed>
  * }

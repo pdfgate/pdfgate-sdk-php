@@ -58,6 +58,26 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertSame(self::$documentId, $flattened->getDerivedFrom());
     }
 
+    public function testProtectPdfReturnsDocumentMetadata(): void
+    {
+        $protected = self::$client->protectPdf(array(
+            'documentId' => self::$documentId,
+            'algorithm' => 'AES256',
+            'ownerPassword' => 'owner-secret',
+            'userPassword' => 'user-secret',
+            'disablePrint' => true,
+            'disableCopy' => true,
+            'disableEditing' => true,
+            'encryptMetadata' => true,
+            'metadata' => array('suite' => 'acceptance-protect'),
+        ));
+
+        self::assertNotSame('', $protected->getId());
+        self::assertSame('completed', $protected->getStatus());
+        self::assertSame('encrypted', $protected->getType());
+        self::assertSame(self::$documentId, $protected->getDerivedFrom());
+    }
+
     public function testExtractPdfFormDataReturnsArrayData(): void
     {
         $extracted = self::$client->extractPdfFormData(array(
