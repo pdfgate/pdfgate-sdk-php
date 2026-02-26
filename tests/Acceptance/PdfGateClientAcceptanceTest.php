@@ -13,6 +13,9 @@ final class PdfGateClientAcceptanceTest extends TestCase
     /** @var PdfGateClient */
     private static $client;
 
+    /** @var string */
+    private static $documentId;
+
     public static function setUpBeforeClass(): void
     {
         $apiKey = getenv('PDFGATE_API_KEY');
@@ -22,6 +25,12 @@ final class PdfGateClientAcceptanceTest extends TestCase
         }
 
         self::$client = new PdfGateClient($apiKey);
+        $shared = self::$client->generatePdf(array(
+            'html' => '<html><body><p>Shared source doc.</p><input name="field1" value="x" /></body></html>',
+            'enableFormFields' => true,
+            'metadata' => array('suite' => 'acceptance-shared-source'),
+        ));
+        self::$documentId = $shared->getId();
     }
 
     public function testGeneratePdfReturnsDocument(): void
@@ -38,33 +47,21 @@ final class PdfGateClientAcceptanceTest extends TestCase
 
     public function testFlattenPdfReturnsDocumentMetadata(): void
     {
-        $generated = self::$client->generatePdf(array(
-            'html' => '<html><body><p>Flatten endpoint check.</p><input name="field1" value="x" /></body></html>',
-            'enableFormFields' => true,
-            'metadata' => array('suite' => 'acceptance-flatten-source'),
-        ));
-
         $flattened = self::$client->flattenPdf(array(
-            'documentId' => $generated->getId(),
+            'documentId' => self::$documentId,
             'metadata' => array('suite' => 'acceptance-flatten'),
         ));
 
         self::assertNotSame('', $flattened->getId());
         self::assertSame('completed', $flattened->getStatus());
         self::assertSame('flattened', $flattened->getType());
-        self::assertSame($generated->getId(), $flattened->getDerivedFrom());
+        self::assertSame(self::$documentId, $flattened->getDerivedFrom());
     }
 
     public function testExtractPdfFormDataReturnsArrayData(): void
     {
-        $generated = self::$client->generatePdf(array(
-            'html' => '<html><body><p>Extract endpoint check.</p><input name="field1" value="x" /></body></html>',
-            'enableFormFields' => true,
-            'metadata' => array('suite' => 'acceptance-extract-source'),
-        ));
-
         $extracted = self::$client->extractPdfFormData(array(
-            'documentId' => $generated->getId(),
+            'documentId' => self::$documentId,
         ));
 
         self::assertIsArray($extracted);
