@@ -1,0 +1,88 @@
+<?php
+
+declare(strict_types=1);
+
+namespace PdfGate;
+
+use PdfGate\Dto\PdfGateDocumentMetadata;
+use PdfGate\Exception\InvalidConfigurationException;
+use PdfGate\Http\ApiRequestHandler;
+use PdfGate\Http\CurlHttpTransport;
+use PdfGate\Http\HttpTransportInterface;
+
+/**
+ * PDFGate API client.
+ *
+ * @phpstan-import-type GeneratePdfRequestPayload from \PdfGate\Type\Types
+ */
+class PdfGateClient
+{
+    private const PROD_BASE_URL = 'https://api.pdfgate.com';
+    private const SANDBOX_BASE_URL = 'https://api-sandbox.pdfgate.com';
+
+    /** @var ApiRequestHandler */
+    private $requestHandler;
+
+    /**
+     * @param string $apiKey PDFGate API key.
+     */
+    public function __construct(string $apiKey)
+    {
+        $this->requestHandler = $this->createRequestHandler($apiKey, new CurlHttpTransport());
+    }
+
+    /**
+     * @internal Intended only for tests and SDK-internal wiring.
+     *
+     * @param string $apiKey PDFGate API key.
+     * @param HttpTransportInterface $transport Custom HTTP transport.
+     */
+    public static function createWithTransport(string $apiKey, HttpTransportInterface $transport): self
+    {
+        $client = new self($apiKey);
+        $client->requestHandler = $client->createRequestHandler($apiKey, $transport);
+
+        return $client;
+    }
+
+    private function createRequestHandler(string $apiKey, HttpTransportInterface $transport): ApiRequestHandler
+    {
+        if (trim($apiKey) === '') {
+            throw new InvalidConfigurationException('API key cannot be empty.');
+        }
+
+        return new ApiRequestHandler(
+            $this->resolveBaseUrl($apiKey),
+            $apiKey,
+            $transport
+        );
+    }
+
+    /**
+     * Generates a PDF from HTML or URL.
+     *
+     * @param GeneratePdfRequestPayload $request Generate PDF request payload.
+     * @return PdfGateDocumentMetadata
+     */
+    public function generatePdf(array $request): PdfGateDocumentMetadata
+    {
+        $request['jsonResponse'] = true;
+
+        $response = $this->requestHandler->postJsonResponse('/v1/generate/pdf', $request);
+
+        return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    private function resolveBaseUrl(string $apiKey): string
+    {
+        if (strpos($apiKey, 'live_') === 0) {
+            return self::PROD_BASE_URL;
+        }
+
+        if (strpos($apiKey, 'test_') === 0) {
+            return self::SANDBOX_BASE_URL;
+        }
+
+        throw new InvalidConfigurationException('API key must start with "live_" or "test_".');
+    }
+}

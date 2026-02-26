@@ -1,3 +1,16 @@
 # VS Code
 
 *.code-workspace
+
+# PHPUnit
+
+.phpunit.result.cache
+
+# Composer
+
+vendor/
+composer.lock
+
+# Coverage
+
+build/coverage/
