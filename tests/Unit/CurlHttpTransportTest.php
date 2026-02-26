@@ -79,6 +79,28 @@ final class CurlHttpTransportTest extends TestCase
         self::assertNotContains('Content-Type: application/json', $curl->setOptArrayOptions[CURLOPT_HTTPHEADER]);
     }
 
+    public function testSendSupportsGetRequestWithoutBody(): void
+    {
+        $curl = new FakeCurlClient();
+        $curl->execResult = '%PDF-1.7';
+        $curl->infoResult = 200;
+
+        $transport = new CurlHttpTransport($curl);
+
+        $response = $transport->send(
+            HttpRequest::makeGet(
+                'https://api.pdfgate.com/file/doc_123',
+                array('Authorization' => 'Bearer x')
+            )
+        );
+
+        self::assertSame(200, $response->statusCode);
+        self::assertSame('%PDF-1.7', $response->body);
+        self::assertNull($curl->postFields);
+        self::assertSame('GET', $curl->setOptArrayOptions[CURLOPT_CUSTOMREQUEST]);
+        self::assertNotContains('Content-Type: application/json', $curl->setOptArrayOptions[CURLOPT_HTTPHEADER]);
+    }
+
     public function testSendThrowsWhenCurlInitFails(): void
     {
         $curl = new FakeCurlClient();

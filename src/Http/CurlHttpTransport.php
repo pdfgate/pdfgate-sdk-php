@@ -42,6 +42,14 @@ class CurlHttpTransport implements HttpTransportInterface
             throw new RuntimeException('HTTP request cannot contain both JSON and multipart body.');
         }
 
+        if ($request->method === 'GET' && ($request->jsonBody !== null || $request->multipartBody !== null)) {
+            if (PHP_VERSION_ID < 80000) {
+                $this->curlClient->close($ch);
+            }
+
+            throw new RuntimeException('GET request cannot contain a request body.');
+        }
+
         if ($request->jsonBody !== null) {
             $json = json_encode($request->jsonBody);
 
