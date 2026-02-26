@@ -9,6 +9,20 @@ use PHPUnit\Framework\TestCase;
 
 final class HttpRequestTest extends TestCase
 {
+    public function testMakeGetSetsNoBody(): void
+    {
+        $request = HttpRequest::makeGet(
+            'https://api.pdfgate.com/file/doc_123',
+            array('Authorization' => 'Bearer x')
+        );
+
+        self::assertSame('GET', $request->method);
+        self::assertSame('https://api.pdfgate.com/file/doc_123', $request->url);
+        self::assertSame(array('Authorization' => 'Bearer x'), $request->headers);
+        self::assertNull($request->jsonBody);
+        self::assertNull($request->multipartBody);
+    }
+
     public function testMakePostJsonSetsJsonBodyOnly(): void
     {
         $request = HttpRequest::makePostJson(
