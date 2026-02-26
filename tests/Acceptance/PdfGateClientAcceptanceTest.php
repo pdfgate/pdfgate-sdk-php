@@ -55,6 +55,21 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertSame($generated->getId(), $flattened->getDerivedFrom());
     }
 
+    public function testExtractPdfFormDataReturnsArrayData(): void
+    {
+        $generated = self::$client->generatePdf(array(
+            'html' => '<html><body><p>Extract endpoint check.</p><input name="field1" value="x" /></body></html>',
+            'enableFormFields' => true,
+            'metadata' => array('suite' => 'acceptance-extract-source'),
+        ));
+
+        $extracted = self::$client->extractPdfFormData(array(
+            'documentId' => $generated->getId(),
+        ));
+
+        self::assertIsArray($extracted);
+    }
+
     public function testAuthFailureBehaviorReturnsApiException(): void
     {
         $client = new PdfGateClient('test_invalid_key');

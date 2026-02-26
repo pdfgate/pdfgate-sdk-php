@@ -15,6 +15,7 @@ use PdfGate\Http\HttpTransportInterface;
  *
  * @phpstan-import-type GeneratePdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type FlattenPdfRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type ExtractPdfFormDataRequestPayload from \PdfGate\Type\Types
  */
 class PdfGateClient
 {
@@ -87,6 +88,19 @@ class PdfGateClient
         $response = $this->requestHandler->postJsonResponse('/forms/flatten', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
+     * Extracts PDF form fields and values for an existing document.
+     *
+     * @param ExtractPdfFormDataRequestPayload $request Extract PDF form data request payload.
+     * @return array<string,mixed>
+     */
+    public function extractPdfFormData(array $request): array
+    {
+        $request['jsonResponse'] = true;
+
+        return $this->requestHandler->postJsonResponse('/forms/extract-data', $request);
     }
 
     private function resolveBaseUrl(string $apiKey): string

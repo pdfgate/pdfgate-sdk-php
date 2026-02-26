@@ -56,6 +56,10 @@ namespace PdfGate\Type;
  *   preSignedUrlExpiresIn?: int,
  *   metadata?: array<string,mixed>
  * }
+ * @phpstan-type ExtractPdfFormDataRequestPayload array{
+ *   documentId: string,
+ *   metadata?: array<string,mixed>
+ * }
  */
 interface Types
 {

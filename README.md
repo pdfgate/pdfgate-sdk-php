@@ -98,6 +98,16 @@ $client->flattenPdf(
 );
 ```
 
+### Extract PDF Form Data
+
+```php
+$client->extractPdfFormData(
+    [
+        'documentId' => $id,
+    ]
+);
+```
+
 
 ## Error handling
 
