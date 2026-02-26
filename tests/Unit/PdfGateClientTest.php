@@ -218,6 +218,92 @@ final class PdfGateClientTest extends TestCase
         self::assertSame(true, $request->jsonBody['jsonResponse']);
     }
 
+    public function testGetDocumentUsesGetEndpointAndAuthHeader(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulGetDocumentResponseWithoutTypeBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->getDocument('68f920bacfe16de217f019as');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->method);
+        self::assertSame('/document/68f920bacfe16de217f019as', parse_url($request->url, PHP_URL_PATH));
+        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
+        self::assertSame('https://api-sandbox.pdfgate.com/document/68f920bacfe16de217f019as', $request->url);
+        self::assertSame(null, $request->jsonBody);
+        self::assertSame(null, $request->multipartBody);
+    }
+
+    public function testGetDocumentAppendsQueryParameters(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulGetDocumentResponseWithoutTypeBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->getDocument('68f920bacfe16de217f019as', array('preSignedUrlExpiresIn' => 1200));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame(
+            'https://api-sandbox.pdfgate.com/document/68f920bacfe16de217f019as?preSignedUrlExpiresIn=1200',
+            $request->url
+        );
+    }
+
+    public function testGetDocumentEncodesPathSegment(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulGetDocumentResponseWithoutTypeBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->getDocument('doc/id with spaces');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/document/doc%2Fid%20with%20spaces', parse_url($request->url, PHP_URL_PATH));
+    }
+
+    public function testGetDocumentReturnsTypedResponseWhenTypeMissing(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulGetDocumentResponseWithoutTypeBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->getDocument('68f920bacfe16de217f019as');
+
+        self::assertInstanceOf(PdfGateDocumentMetadata::class, $response);
+        self::assertSame('6642381c5c61', $response->getId());
+        self::assertSame('completed', $response->getStatus());
+        self::assertSame(null, $response->getType());
+        self::assertSame('https://api.pdfgate.com/file/open/token', $response->getFileUrl());
+        self::assertSame(1620006, $response->getSize());
+        self::assertSame('2024-02-13T15:56:12.607Z', $response->getCreatedAt());
+    }
+
+    public function testGetDocumentThrowsApiExceptionOnNon2xx(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(404, '{"error":"not found"}'));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(ApiException::class);
+        $this->expectExceptionMessage('status 404');
+
+        $client->getDocument('missing_doc');
+    }
+
+    public function testGetDocumentWrapsTransportFailuresWithRequestContext(): void
+    {
+        $previous = new RuntimeException('socket failure');
+        $transport = new ThrowingTransport($previous);
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        try {
+            $client->getDocument('doc_123');
+            self::fail('Expected TransportException was not thrown.');
+        } catch (TransportException $e) {
+            self::assertSame($previous, $e->getPrevious());
+            self::assertStringContainsString('GET https://api-sandbox.pdfgate.com/document/doc_123', $e->getMessage());
+        }
+    }
+
     private function successfulGenerateResponseBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","type":"from_html","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z"}';
@@ -231,6 +317,11 @@ final class PdfGateClientTest extends TestCase
     private function successfulFlattenResponseBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","type":"flattened","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z","derivedFrom":"68f920bacfe16de217f019as"}';
+    }
+
+    private function successfulGetDocumentResponseWithoutTypeBody(): string
+    {
+        return '{"id":"6642381c5c61","status":"completed","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z"}';
     }
 }
 

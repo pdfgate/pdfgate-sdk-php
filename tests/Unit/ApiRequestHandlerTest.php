@@ -117,6 +117,43 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame('6642381c5c61', $result['id']);
         self::assertSame('completed', $result['status']);
     }
+
+    public function testGetJsonResponseSendsGetRequestWithQueryAndAuthHeader(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_123"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $handler->getJsonResponse('/document/doc_123', array('preSignedUrlExpiresIn' => 1200));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->method);
+        self::assertSame(
+            'https://api.pdfgate.com/document/doc_123?preSignedUrlExpiresIn=1200',
+            $request->url
+        );
+        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
+        self::assertSame(null, $request->jsonBody);
+        self::assertSame(null, $request->multipartBody);
+    }
+
+    public function testGetJsonResponseDecodesJsonObjectResponse(): void
+    {
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            new StaticResponseTransport(new HttpResponse(200, '{"id":"6642381c5c61","status":"completed"}'))
+        );
+
+        $result = $handler->getJsonResponse('/document/6642381c5c61');
+
+        self::assertSame('6642381c5c61', $result['id']);
+        self::assertSame('completed', $result['status']);
+    }
 }
 
 final class StaticResponseTransport implements HttpTransportInterface

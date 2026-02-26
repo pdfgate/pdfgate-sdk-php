@@ -18,6 +18,7 @@ use PdfGate\Http\HttpTransportInterface;
  * @phpstan-import-type CompressPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ProtectPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ExtractPdfFormDataRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type GetDocumentQueryPayload from \PdfGate\Type\Types
  */
 class PdfGateClient
 {
@@ -133,6 +134,23 @@ class PdfGateClient
         $request['jsonResponse'] = true;
 
         return $this->requestHandler->postJsonResponse('/forms/extract-data', $request);
+    }
+
+    /**
+     * Retrieves metadata and file details for an existing document.
+     *
+     * @param string $documentId Existing document ID.
+     * @param GetDocumentQueryPayload $query Optional get-document query options.
+     * @return PdfGateDocumentMetadata
+     */
+    public function getDocument(string $documentId, array $query = array()): PdfGateDocumentMetadata
+    {
+        $response = $this->requestHandler->getJsonResponse(
+            '/document/' . rawurlencode($documentId),
+            $query
+        );
+
+        return PdfGateDocumentMetadata::fromArray($response);
     }
 
     private function resolveBaseUrl(string $apiKey): string

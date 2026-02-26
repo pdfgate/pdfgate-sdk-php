@@ -47,7 +47,12 @@ $flattened = $client->flattenPdf(
     ]
 );
 
-echo $flattened->getId();
+$document = $client->getDocument(
+    $flattened->getId(),
+    ['preSignedUrlExpiresIn' => 1200]
+);
+
+echo $document->getId();
 ```
 
 The SDK selects the base URL from the API key prefix:
@@ -140,6 +145,16 @@ $client->extractPdfFormData(
 );
 ```
 
+### Get Document
+
+```php
+$client->getDocument(
+    $id,
+    [
+        'preSignedUrlExpiresIn' => 1200,
+    ]
+);
+```
 
 ## Error handling
 

@@ -17,7 +17,7 @@ class PdfGateDocumentMetadata
     /** @var string */
     private $status;
 
-    /** @var string */
+    /** @var string|null */
     private $type;
 
     /** @var string|null */
@@ -35,7 +35,7 @@ class PdfGateDocumentMetadata
     public function __construct(
         string $id,
         string $status,
-        string $type,
+        ?string $type,
         ?string $fileUrl,
         int $size,
         string $createdAt,
@@ -55,7 +55,7 @@ class PdfGateDocumentMetadata
      */
     public static function fromArray(array $payload): self
     {
-        $required = array('id', 'status', 'type', 'size', 'createdAt');
+        $required = array('id', 'status', 'size', 'createdAt');
 
         foreach ($required as $field) {
             if (!array_key_exists($field, $payload)) {
@@ -66,7 +66,7 @@ class PdfGateDocumentMetadata
         return new self(
             (string) $payload['id'],
             (string) $payload['status'],
-            (string) $payload['type'],
+            array_key_exists('type', $payload) ? (string) $payload['type'] : null,
             array_key_exists('fileUrl', $payload) ? (string) $payload['fileUrl'] : null,
             (int) $payload['size'],
             (string) $payload['createdAt'],
@@ -84,7 +84,7 @@ class PdfGateDocumentMetadata
         return $this->status;
     }
 
-    public function getType(): string
+    public function getType(): ?string
     {
         return $this->type;
     }

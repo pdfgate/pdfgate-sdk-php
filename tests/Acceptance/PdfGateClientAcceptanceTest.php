@@ -101,6 +101,18 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertIsArray($extracted);
     }
 
+    public function testGetDocumentReturnsDocumentMetadata(): void
+    {
+        $document = self::$client->getDocument(
+            self::$documentId,
+            array('preSignedUrlExpiresIn' => 1200)
+        );
+
+        self::assertSame(self::$documentId, $document->getId());
+        self::assertSame('completed', $document->getStatus());
+        self::assertSame('from_html', $document->getType());
+    }
+
     public function testAuthFailureBehaviorReturnsApiException(): void
     {
         $client = new PdfGateClient('test_invalid_key');

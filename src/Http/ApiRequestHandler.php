@@ -88,6 +88,30 @@ class ApiRequestHandler
     }
 
     /**
+     * Sends a GET request and parses a JSON response.
+     *
+     * @param string $path Endpoint path.
+     * @param array<string,mixed> $query Query string parameters.
+     * @return array<string,mixed>
+     */
+    public function getJsonResponse(string $path, array $query = array()): array
+    {
+        $url = (new UrlBuilder())
+            ->withDomain($this->baseUrl)
+            ->withPath($path)
+            ->withQuery($query)
+            ->build();
+        $request = HttpRequest::makeGet(
+            $url,
+            $this->authHeaders()
+        );
+
+        $response = $this->send($request);
+
+        return $this->decodeJsonResponse($response->body);
+    }
+
+    /**
      * @return array<string,string>
      */
     private function authHeaders(): array

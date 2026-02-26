@@ -82,6 +82,9 @@ namespace PdfGate\Type;
  *   documentId: string,
  *   metadata?: array<string,mixed>
  * }
+ * @phpstan-type GetDocumentQueryPayload array{
+ *   preSignedUrlExpiresIn?: int
+ * }
  */
 interface Types
 {

@@ -38,4 +38,18 @@ final class HttpRequestTest extends TestCase
         self::assertSame(array('documentId' => 'doc_123'), $request->multipartBody);
         self::assertNull($request->jsonBody);
     }
+
+    public function testMakeGetSetsNoRequestBody(): void
+    {
+        $request = HttpRequest::makeGet(
+            'https://api.pdfgate.com/document/doc_123?preSignedUrlExpiresIn=1200',
+            array('Authorization' => 'Bearer x')
+        );
+
+        self::assertSame('GET', $request->method);
+        self::assertSame('https://api.pdfgate.com/document/doc_123?preSignedUrlExpiresIn=1200', $request->url);
+        self::assertSame(array('Authorization' => 'Bearer x'), $request->headers);
+        self::assertNull($request->jsonBody);
+        self::assertNull($request->multipartBody);
+    }
 }

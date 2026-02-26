@@ -70,4 +70,15 @@ class HttpRequest
     ): self {
         return new self('POST', $url, $headers, null, $multipartBody);
     }
+
+    /**
+     * @param string $url Full request URL including optional query string.
+     * @param array<string,string> $headers HTTP headers map.
+     */
+    public static function makeGet(
+        string $url,
+        array $headers = array()
+    ): self {
+        return new self('GET', $url, $headers, null, null);
+    }
 }
