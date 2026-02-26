@@ -112,6 +112,29 @@ class ApiRequestHandler
     }
 
     /**
+     * Sends a GET request and returns the raw response body.
+     *
+     * @param string $path Endpoint path.
+     * @return string
+     */
+    public function getBinaryResponse(string $path): string
+    {
+        $url = (new UrlBuilder())
+            ->withDomain($this->baseUrl)
+            ->withPath($path)
+            ->withQuery([])
+            ->build();
+        $request = HttpRequest::makeGet(
+            $url,
+            $this->authHeaders()
+        );
+
+        $response = $this->send($request);
+
+        return $response->body;
+    }
+
+    /**
      * @return array<string,string>
      */
     private function authHeaders(): array

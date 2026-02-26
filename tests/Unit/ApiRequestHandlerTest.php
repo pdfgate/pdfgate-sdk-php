@@ -154,6 +154,44 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame('6642381c5c61', $result['id']);
         self::assertSame('completed', $result['status']);
     }
+
+    public function testGetBinaryResponseSendsGetRequestAndReturnsRawBody(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '%PDF-1.7 binary'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $result = $handler->getBinaryResponse('/file/doc_123');
+
+        self::assertSame('%PDF-1.7 binary', $result);
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->method);
+        self::assertSame('https://api.pdfgate.com/file/doc_123', $request->url);
+        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
+        self::assertNull($request->jsonBody);
+        self::assertNull($request->multipartBody);
+    }
+
+    public function testGetBinaryResponseThrowsApiExceptionOnNonSuccessStatusCode(): void
+    {
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            new StaticResponseTransport(new HttpResponse(404, '{"error":"not found"}'))
+        );
+
+        try {
+            $handler->getBinaryResponse('/file/missing_doc');
+            self::fail('Expected ApiException was not thrown.');
+        } catch (ApiException $e) {
+            self::assertSame(404, $e->getStatusCode());
+            self::assertStringContainsString('not found', $e->getMessage());
+        }
+    }
 }
 
 final class StaticResponseTransport implements HttpTransportInterface
