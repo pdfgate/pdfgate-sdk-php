@@ -32,7 +32,6 @@ final class PdfGateClientAcceptanceTest extends TestCase
         ));
 
         self::assertNotSame('', $response->getId());
-        self::assertNotSame('', $response->getFileUrl());
         self::assertSame('completed', $response->getStatus());
         self::assertSame('from_html', $response->getType());
     }

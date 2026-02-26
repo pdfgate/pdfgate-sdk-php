@@ -20,7 +20,7 @@ class PdfGateDocumentMetadata
     /** @var string */
     private $type;
 
-    /** @var string */
+    /** @var string|null */
     private $fileUrl;
 
     /** @var int */
@@ -33,7 +33,7 @@ class PdfGateDocumentMetadata
         string $id,
         string $status,
         string $type,
-        string $fileUrl,
+        ?string $fileUrl,
         int $size,
         string $createdAt
     ) {
@@ -62,7 +62,7 @@ class PdfGateDocumentMetadata
             (string) $payload['id'],
             (string) $payload['status'],
             (string) $payload['type'],
-            (string) $payload['fileUrl'],
+            array_key_exists('fileUrl', $payload) ? (string) $payload['fileUrl'] : null,
             (int) $payload['size'],
             (string) $payload['createdAt']
         );
@@ -83,7 +83,7 @@ class PdfGateDocumentMetadata
         return $this->type;
     }
 
-    public function getFileUrl(): string
+    public function getFileUrl(): ?string
     {
         return $this->fileUrl;
     }

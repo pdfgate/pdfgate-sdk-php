@@ -53,6 +53,17 @@ final class PdfGateClientTest extends TestCase
         self::assertSame('https://api.pdfgate.com/file/open/token', $response->getFileUrl());
         self::assertSame(1620006, $response->getSize());
         self::assertSame('2024-02-13T15:56:12.607Z', $response->getCreatedAt());
+        self::assertNull($response->getDerivedFrom());
+    }
+
+    public function testGeneratePdfAllowsMissingOptionalFileUrlInResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulGenerateResponseWithoutFileUrlBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->generatePdf(array('html' => '<p>Hello</p>'));
+
+        self::assertSame('', $response->getFileUrl());
     }
 
     public function testLiveApiKeyUsesProductionBaseUrl(): void
