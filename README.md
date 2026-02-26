@@ -40,7 +40,14 @@ $generated = $client->generatePdf(
     ]
 );
 
-echo $generated->getId();
+$flattened = $client->flattenPdf(
+    [
+        'documentId' => $generated->getId(),
+        'metadata' => ['source' => 'sdk'],
+    ]
+);
+
+echo $flattened->getId();
 ```
 
 The SDK selects the base URL from the API key prefix:
@@ -48,11 +55,12 @@ The SDK selects the base URL from the API key prefix:
 - `live_` => `https://api.pdfgate.com`
 - `test_` => `https://api-sandbox.pdfgate.com`
 
-## Public API
+## Examples
+
+
+### Generate PDF
 
 ```php
-<?php
-
 $client = new PdfGateClient('live_your_api_key');
 
 $client->generatePdf(
@@ -78,8 +86,18 @@ $client->generatePdf(
 );
 ```
 
-`generatePdf` accepts an associative array payload. See PHPDoc in `PdfGateClient::generatePdf()` for the full typed shape used by PHPStan.
-`generatePdf` returns `PdfGate\Dto\PdfGateDocumentMetadata`.
+### Flatten PDF
+
+```php
+$client->flattenPdf(
+    [
+        'documentId' => $id,
+        'preSignedUrlExpiresIn' => 1200,
+        'metadata' => ['source' => 'sdk'],
+    ]
+);
+```
+
 
 ## Error handling
 

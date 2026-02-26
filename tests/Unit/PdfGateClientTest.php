@@ -63,7 +63,7 @@ final class PdfGateClientTest extends TestCase
 
         $response = $client->generatePdf(array('html' => '<p>Hello</p>'));
 
-        self::assertSame('', $response->getFileUrl());
+        self::assertSame(null, $response->getFileUrl());
     }
 
     public function testLiveApiKeyUsesProductionBaseUrl(): void
@@ -166,9 +166,71 @@ final class PdfGateClientTest extends TestCase
         self::assertSame(true, $request->jsonBody['jsonResponse']);
     }
 
+    public function testFlattenPdfEnforcesJsonResponseAndUsesFlattenPath(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulFlattenResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->flattenPdf(array('documentId' => '68f920bacfe16de217f019as'));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/forms/flatten', parse_url($request->url, PHP_URL_PATH));
+        self::assertSame('68f920bacfe16de217f019as', $request->jsonBody['documentId']);
+        self::assertSame(true, $request->jsonBody['jsonResponse']);
+        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
+        self::assertSame('https://api-sandbox.pdfgate.com/forms/flatten', $request->url);
+    }
+
+    public function testFlattenPdfReturnsTypedResponseWithDerivedFrom(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulFlattenResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->flattenPdf(array('documentId' => '68f920bacfe16de217f019as'));
+
+        self::assertInstanceOf(PdfGateDocumentMetadata::class, $response);
+        self::assertSame('6642381c5c61', $response->getId());
+        self::assertSame('completed', $response->getStatus());
+        self::assertSame('flattened', $response->getType());
+        self::assertSame('https://api.pdfgate.com/file/open/token', $response->getFileUrl());
+        self::assertSame(1620006, $response->getSize());
+        self::assertSame('2024-02-13T15:56:12.607Z', $response->getCreatedAt());
+        self::assertSame('68f920bacfe16de217f019as', $response->getDerivedFrom());
+    }
+
+    public function testFlattenPdfForwardsOptionalFieldsVerbatimAndEnforcesJsonResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulFlattenResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->flattenPdf(array(
+            'documentId' => '68f920bacfe16de217f019as',
+            'preSignedUrlExpiresIn' => 1200,
+            'metadata' => array('env' => 'test'),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('68f920bacfe16de217f019as', $request->jsonBody['documentId']);
+        self::assertSame(1200, $request->jsonBody['preSignedUrlExpiresIn']);
+        self::assertSame(array('env' => 'test'), $request->jsonBody['metadata']);
+        self::assertSame(true, $request->jsonBody['jsonResponse']);
+    }
+
     private function successfulGenerateResponseBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","type":"from_html","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z"}';
+    }
+
+    private function successfulGenerateResponseWithoutFileUrlBody(): string
+    {
+        return '{"id":"6642381c5c61","status":"completed","type":"from_html","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z"}';
+    }
+
+    private function successfulFlattenResponseBody(): string
+    {
+        return '{"id":"6642381c5c61","status":"completed","type":"flattened","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z","derivedFrom":"68f920bacfe16de217f019as"}';
     }
 }
 

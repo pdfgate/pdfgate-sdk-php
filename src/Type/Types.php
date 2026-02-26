@@ -51,6 +51,11 @@ namespace PdfGate\Type;
  *   enableFormFields?: bool,
  *   metadata?: array<string,mixed>
  * }
+ * @phpstan-type FlattenPdfRequestPayload array{
+ *   documentId: string,
+ *   preSignedUrlExpiresIn?: int,
+ *   metadata?: array<string,mixed>
+ * }
  */
 interface Types
 {

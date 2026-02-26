@@ -36,6 +36,25 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertSame('from_html', $response->getType());
     }
 
+    public function testFlattenPdfReturnsDocumentMetadata(): void
+    {
+        $generated = self::$client->generatePdf(array(
+            'html' => '<html><body><p>Flatten endpoint check.</p><input name="field1" value="x" /></body></html>',
+            'enableFormFields' => true,
+            'metadata' => array('suite' => 'acceptance-flatten-source'),
+        ));
+
+        $flattened = self::$client->flattenPdf(array(
+            'documentId' => $generated->getId(),
+            'metadata' => array('suite' => 'acceptance-flatten'),
+        ));
+
+        self::assertNotSame('', $flattened->getId());
+        self::assertSame('completed', $flattened->getStatus());
+        self::assertSame('flattened', $flattened->getType());
+        self::assertSame($generated->getId(), $flattened->getDerivedFrom());
+    }
+
     public function testAuthFailureBehaviorReturnsApiException(): void
     {
         $client = new PdfGateClient('test_invalid_key');

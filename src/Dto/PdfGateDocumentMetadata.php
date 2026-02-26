@@ -29,13 +29,17 @@ class PdfGateDocumentMetadata
     /** @var string */
     private $createdAt;
 
+    /** @var string|null */
+    private $derivedFrom;
+
     public function __construct(
         string $id,
         string $status,
         string $type,
         ?string $fileUrl,
         int $size,
-        string $createdAt
+        string $createdAt,
+        ?string $derivedFrom = null
     ) {
         $this->id = $id;
         $this->status = $status;
@@ -43,6 +47,7 @@ class PdfGateDocumentMetadata
         $this->fileUrl = $fileUrl;
         $this->size = $size;
         $this->createdAt = $createdAt;
+        $this->derivedFrom = $derivedFrom;
     }
 
     /**
@@ -50,7 +55,7 @@ class PdfGateDocumentMetadata
      */
     public static function fromArray(array $payload): self
     {
-        $required = array('id', 'status', 'type', 'fileUrl', 'size', 'createdAt');
+        $required = array('id', 'status', 'type', 'size', 'createdAt');
 
         foreach ($required as $field) {
             if (!array_key_exists($field, $payload)) {
@@ -64,7 +69,8 @@ class PdfGateDocumentMetadata
             (string) $payload['type'],
             array_key_exists('fileUrl', $payload) ? (string) $payload['fileUrl'] : null,
             (int) $payload['size'],
-            (string) $payload['createdAt']
+            (string) $payload['createdAt'],
+            array_key_exists('derivedFrom', $payload) ? (string) $payload['derivedFrom'] : null
         );
     }
 
@@ -96,5 +102,10 @@ class PdfGateDocumentMetadata
     public function getCreatedAt(): string
     {
         return $this->createdAt;
+    }
+
+    public function getDerivedFrom(): ?string
+    {
+        return $this->derivedFrom;
     }
 }

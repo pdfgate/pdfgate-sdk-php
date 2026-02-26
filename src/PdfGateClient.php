@@ -14,6 +14,7 @@ use PdfGate\Http\HttpTransportInterface;
  * PDFGate API client.
  *
  * @phpstan-import-type GeneratePdfRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type FlattenPdfRequestPayload from \PdfGate\Type\Types
  */
 class PdfGateClient
 {
@@ -69,6 +70,21 @@ class PdfGateClient
         $request['jsonResponse'] = true;
 
         $response = $this->requestHandler->postJsonResponse('/v1/generate/pdf', $request);
+
+        return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
+     * Flattens an existing PDF document.
+     *
+     * @param FlattenPdfRequestPayload $request Flatten PDF request payload.
+     * @return PdfGateDocumentMetadata
+     */
+    public function flattenPdf(array $request): PdfGateDocumentMetadata
+    {
+        $request['jsonResponse'] = true;
+
+        $response = $this->requestHandler->postJsonResponse('/forms/flatten', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }
