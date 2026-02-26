@@ -20,22 +20,25 @@ namespace PdfGate\Type;
  *   ignoreFailingChains: bool,
  *   chains: list<ClickSelectorChainPayload>
  * }
+ * @phpstan-type GeneratePdfPageSizeType 'a0'|'a1'|'a2'|'a3'|'a4'|'a5'|'a6'|'ledger'|'tabloid'|'legal'|'letter'
+ * @phpstan-type GeneratePdfOrientation 'portrait'|'landscape'
+ * @phpstan-type GeneratePdfEmulateMediaType 'screen'|'print'
  * @phpstan-type ProtectPdfAlgorithm 'AES256'|'AES128'
  * @phpstan-type GeneratePdfRequestPayload array{
  *   html?: string,
  *   url?: string,
  *   preSignedUrlExpiresIn?: int,
- *   pageSizeType?: string,
+ *   pageSizeType?: GeneratePdfPageSizeType,
  *   width?: float|int,
  *   height?: float|int,
- *   orientation?: string,
+ *   orientation?: GeneratePdfOrientation,
  *   header?: string,
  *   footer?: string,
  *   margin?: MarginPayload,
  *   timeout?: int,
  *   javascript?: string,
  *   css?: string,
- *   emulateMediaType?: string,
+ *   emulateMediaType?: GeneratePdfEmulateMediaType,
  *   waitForSelector?: string,
  *   clickSelector?: string,
  *   clickSelectorChainSetup?: ClickSelectorChainSetupPayload,
