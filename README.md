@@ -219,21 +219,33 @@ Non-2xx responses throw `PdfGate\Exception\ApiException` with:
 
 Transport and parsing failures throw `PdfGate\Exception\TransportException` and preserve original causes.
 
-## Tests
+## Development
 
-Run unit tests:
+This section is the source of truth for setup, and testing.
+
+### Local setup
+
+```bash
+composer install
+```
+
+### Run tests
+
+Unit tests:
 
 ```bash
 composer test -- --testsuite unit
 ```
 
-Run acceptance tests (real API calls):
+Acceptance tests (real API calls):
 
 ```bash
 PDFGATE_API_KEY=your_key composer test -- --testsuite acceptance
 ```
 
-You can check types with PHPStan:
+### Static analysis
+
+Run PHPStan:
 
 ```bash
 composer run stan
