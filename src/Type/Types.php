@@ -55,6 +55,12 @@ namespace PdfGate\Type;
  *   enableFormFields?: bool,
  *   metadata?: array<string,mixed>
  * }
+ * @phpstan-type UploadFileRequestPayload array{
+ *   file?: \CURLFile,
+ *   url?: string,
+ *   preSignedUrlExpiresIn?: int,
+ *   metadata?: array<string,mixed>
+ * }
  * @phpstan-type FlattenPdfRequestPayload array{
  *   documentId: string,
  *   preSignedUrlExpiresIn?: int,
