@@ -2,6 +2,9 @@
 
 Official PHP SDK for the PDFGate HTTP API.
 
+[![CI](https://github.com/pdfgate/pdfgate-sdk-php/actions/workflows/ci.yml/badge.svg)](https://github.com/pdfgate/pdfgate-sdk-php/actions/workflows/ci.yml)
+[![Release](https://github.com/pdfgate/pdfgate-sdk-php/actions/workflows/release.yml/badge.svg)](https://github.com/pdfgate/pdfgate-sdk-php/actions/workflows/release.yml)
+
 PDFGate lets you generate, process, and secure PDFs via a simple API:
 
 - HTML or URL to PDF
