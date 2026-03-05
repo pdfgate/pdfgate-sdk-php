@@ -18,6 +18,7 @@ use PdfGate\Http\HttpTransportInterface;
  * @phpstan-import-type FlattenPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type CompressPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ProtectPdfRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type WatermarkPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ExtractPdfFormDataRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type GetDocumentQueryPayload from \PdfGate\Type\Types
  */
@@ -120,6 +121,21 @@ class PdfGateClient
         $request['jsonResponse'] = true;
 
         $response = $this->requestHandler->postJsonResponse('/protect/pdf', $request);
+
+        return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
+     * Adds a text or image watermark to an existing PDF document.
+     *
+     * @param WatermarkPdfRequestPayload $request Watermark PDF request payload.
+     * @return PdfGateDocumentMetadata
+     */
+    public function watermarkPdf(array $request): PdfGateDocumentMetadata
+    {
+        $request['jsonResponse'] = true;
+
+        $response = $this->requestHandler->postMultipartJsonResponse('/watermark/pdf', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }

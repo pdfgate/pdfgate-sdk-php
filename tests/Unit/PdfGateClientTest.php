@@ -218,6 +218,70 @@ final class PdfGateClientTest extends TestCase
         self::assertSame(true, $request->jsonBody['jsonResponse']);
     }
 
+    public function testWatermarkPdfEnforcesJsonResponseAndUsesWatermarkPath(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulWatermarkResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->watermarkPdf(array(
+            'documentId' => '68f920bacfe16de217f019as',
+            'type' => 'text',
+            'text' => 'My watermark!',
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/watermark/pdf', parse_url($request->url, PHP_URL_PATH));
+        self::assertSame(null, $request->jsonBody);
+        self::assertSame(true, $request->multipartBody['jsonResponse']);
+        self::assertSame('https://api-sandbox.pdfgate.com/watermark/pdf', $request->url);
+    }
+
+    public function testWatermarkPdfForcesJsonResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulWatermarkResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+        $watermarkFile = new \CURLFile(__FILE__);
+
+        $client->watermarkPdf(array(
+            'documentId' => '68f920bacfe16de217f019as',
+            'type' => 'image',
+            'watermark' => $watermarkFile,
+            'opacity' => 0.2,
+            'rotate' => 30,
+            'xPosition' => 10,
+            'yPosition' => 20,
+            'imageWidth' => 150,
+            'imageHeight' => 90,
+            'metadata' => array('env' => 'test'),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame(true, $request->multipartBody['jsonResponse']);
+    }
+
+    public function testWatermarkPdfReturnsTypedResponseWithDerivedFrom(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulWatermarkResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->watermarkPdf(array(
+            'documentId' => '68f920bacfe16de217f019as',
+            'type' => 'text',
+            'text' => 'My watermark!',
+        ));
+
+        self::assertInstanceOf(PdfGateDocumentMetadata::class, $response);
+        self::assertSame('6642381c5c61', $response->getId());
+        self::assertSame('completed', $response->getStatus());
+        self::assertSame('watermarked', $response->getType());
+        self::assertSame('https://api.pdfgate.com/file/open/token', $response->getFileUrl());
+        self::assertSame(1620006, $response->getSize());
+        self::assertSame('2024-02-13T15:56:12.607Z', $response->getCreatedAt());
+        self::assertSame('68f920bacfe16de217f019as', $response->getDerivedFrom());
+    }
+
     public function testGetDocumentUsesGetEndpointAndAuthHeader(): void
     {
         $transport = new RecordingTransport(new HttpResponse(200, $this->successfulGetDocumentResponseWithoutTypeBody()));
@@ -312,7 +376,6 @@ final class PdfGateClientTest extends TestCase
 
         $stream = $client->getFile('doc_123');
 
-        self::assertIsResource($stream);
         self::assertSame('stream', get_resource_type($stream));
         self::assertSame($binaryBody, stream_get_contents($stream));
         fclose($stream);
@@ -392,6 +455,11 @@ final class PdfGateClientTest extends TestCase
     private function successfulFlattenResponseBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","type":"flattened","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z","derivedFrom":"68f920bacfe16de217f019as"}';
+    }
+
+    private function successfulWatermarkResponseBody(): string
+    {
+        return '{"id":"6642381c5c61","status":"completed","type":"watermarked","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z","derivedFrom":"68f920bacfe16de217f019as"}';
     }
 
     private function successfulGetDocumentResponseWithoutTypeBody(): string

@@ -92,6 +92,47 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertSame(self::$documentId, $protected->getDerivedFrom());
     }
 
+    public function testWatermarkPdfTextReturnsDocumentMetadata(): void
+    {
+        $watermarked = self::$client->watermarkPdf(array(
+            'documentId' => self::$documentId,
+            'type' => 'text',
+            'text' => 'ACCEPTANCE WATERMARK',
+            'fontColor' => '#AA33CC',
+            'rotate' => 30,
+            'opacity' => 0.2,
+            'metadata' => array('suite' => 'acceptance-watermark-text'),
+        ));
+
+        self::assertNotSame('', $watermarked->getId());
+        self::assertSame('completed', $watermarked->getStatus());
+        self::assertSame('watermarked', $watermarked->getType());
+        self::assertSame(self::$documentId, $watermarked->getDerivedFrom());
+    }
+
+    public function testWatermarkPdfImageReturnsDocumentMetadata(): void
+    {
+        $watermarkFilePath = __DIR__ . '/fixtures/watermark.png';
+        if (!file_exists($watermarkFilePath)) {
+            self::markTestSkipped('Missing acceptance fixture: tests/Acceptance/fixtures/watermark.png');
+        }
+
+        $watermarked = self::$client->watermarkPdf(array(
+            'documentId' => self::$documentId,
+            'type' => 'image',
+            'watermark' => new \CURLFile($watermarkFilePath, 'image/png', 'watermark.png'),
+            'imageWidth' => 96,
+            'imageHeight' => 96,
+            'opacity' => 0.25,
+            'metadata' => array('suite' => 'acceptance-watermark-image'),
+        ));
+
+        self::assertNotSame('', $watermarked->getId());
+        self::assertSame('completed', $watermarked->getStatus());
+        self::assertSame('watermarked', $watermarked->getType());
+        self::assertSame(self::$documentId, $watermarked->getDerivedFrom());
+    }
+
     public function testExtractPdfFormDataReturnsArrayData(): void
     {
         $extracted = self::$client->extractPdfFormData(array(

@@ -78,6 +78,26 @@ namespace PdfGate\Type;
  *   preSignedUrlExpiresIn?: int,
  *   metadata?: array<string,mixed>
  * }
+ * @phpstan-type WatermarkPdfType 'text'|'image'
+ * @phpstan-type WatermarkPdfFont 'times-roman'|'times-bold'|'times-italic'|'times-bolditalic'|'helvetica'|'helvetica-bold'|'helvetica-oblique'|'helvetica-boldoblique'|'courier'|'courier-bold'|'courier-oblique'|'courier-boldoblique'
+ * @phpstan-type WatermarkPdfRequestPayload array{
+ *   documentId: string,
+ *   type: WatermarkPdfType,
+ *   text?: string,
+ *   watermark?: \CURLFile,
+ *   fontFile?: \CURLFile,
+ *   font?: WatermarkPdfFont,
+ *   fontSize?: float|int,
+ *   fontColor?: string,
+ *   opacity?: float,
+ *   xPosition?: float|int,
+ *   yPosition?: float|int,
+ *   imageWidth?: float|int,
+ *   imageHeight?: float|int,
+ *   rotate?: float|int,
+ *   preSignedUrlExpiresIn?: int,
+ *   metadata?: array<string,mixed>
+ * }
  * @phpstan-type ExtractPdfFormDataRequestPayload array{
  *   documentId: string,
  *   metadata?: array<string,mixed>

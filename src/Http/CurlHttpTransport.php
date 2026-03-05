@@ -72,7 +72,8 @@ class CurlHttpTransport implements HttpTransportInterface
         }
 
         if ($request->multipartBody !== null) {
-            if ($this->curlClient->setOpt($ch, CURLOPT_POSTFIELDS, $request->multipartBody) === false) {
+            $multipartBody = $this->normalizeMultipartBody($request->multipartBody);
+            if ($this->curlClient->setOpt($ch, CURLOPT_POSTFIELDS, $multipartBody) === false) {
                 if (PHP_VERSION_ID < 80000) {
                     $this->curlClient->close($ch);
                 }
@@ -120,4 +121,57 @@ class CurlHttpTransport implements HttpTransportInterface
         return new HttpResponse($statusCode, (string) $responseBody);
     }
 
+    /**
+     * @param array<string,mixed> $payload
+     * @return array<string,mixed>
+     */
+    private function normalizeMultipartBody(array $payload): array
+    {
+        $normalized = array();
+
+        foreach ($payload as $key => $value) {
+            $this->appendMultipartField($normalized, (string) $key, $value);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<string,mixed> $normalized
+     * @param mixed $value
+     */
+    private function appendMultipartField(array &$normalized, string $key, $value): void
+    {
+        if ($value instanceof \CURLFile) {
+            $normalized[$key] = $value;
+            return;
+        }
+
+        if (is_bool($value)) {
+            $normalized[$key] = $value ? 'true' : 'false';
+            return;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $childKey => $childValue) {
+                $this->appendMultipartField($normalized, $key . '[' . (string) $childKey . ']', $childValue);
+            }
+            return;
+        }
+
+        if (is_object($value)) {
+            /** @var array<string,mixed> $objectFields */
+            $objectFields = get_object_vars($value);
+            foreach ($objectFields as $childKey => $childValue) {
+                $this->appendMultipartField($normalized, $key . '[' . (string) $childKey . ']', $childValue);
+            }
+            return;
+        }
+
+        if ($value === null) {
+            return;
+        }
+
+        $normalized[$key] = $value;
+    }
 }

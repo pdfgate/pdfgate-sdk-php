@@ -135,6 +135,45 @@ $client->protectPdf(
 );
 ```
 
+### Watermark PDF
+
+`watermarkPdf()` always sends multipart form data and forces `jsonResponse=true`.
+
+Text watermark:
+
+```php
+$client->watermarkPdf(
+    [
+        'documentId' => $id,
+        'type' => 'text',
+        'text' => 'Confidential',
+        'fontColor' => 'rgb(156, 50, 168)',
+        'rotate' => 30,
+        'opacity' => 0.2,
+        'metadata' => ['source' => 'sdk'],
+    ]
+);
+```
+
+Image watermark:
+
+```php
+$client->watermarkPdf(
+    [
+        'documentId' => $id,
+        'type' => 'image',
+        'watermark' => new \CURLFile('/absolute/path/watermark.png'),
+        'imageWidth' => 120,
+        'imageHeight' => 120,
+        'opacity' => 0.2,
+        'metadata' => ['source' => 'sdk'],
+    ]
+);
+```
+
+Key fields: `documentId`, `type`, `text`, `watermark`, `fontFile`, `font`, `fontSize`, `fontColor`,
+`opacity`, `xPosition`, `yPosition`, `imageWidth`, `imageHeight`, `rotate`, `preSignedUrlExpiresIn`, `metadata`.
+
 ### Extract PDF Form Data
 
 ```php

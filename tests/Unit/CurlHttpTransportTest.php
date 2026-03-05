@@ -79,6 +79,35 @@ final class CurlHttpTransportTest extends TestCase
         self::assertNotContains('Content-Type: application/json', $curl->setOptArrayOptions[CURLOPT_HTTPHEADER]);
     }
 
+    public function testSendNormalizesMultipartBooleansAndNestedArrays(): void
+    {
+        $curl = new FakeCurlClient();
+        $curl->execResult = '{}';
+        $curl->infoResult = 200;
+
+        $transport = new CurlHttpTransport($curl);
+
+        $transport->send(
+            HttpRequest::makePostMultipart(
+                'https://api.pdfgate.com/watermark/pdf',
+                array('Authorization' => 'Bearer x'),
+                array(
+                    'documentId' => 'doc_123',
+                    'jsonResponse' => true,
+                    'metadata' => array(
+                        'suite' => 'acceptance',
+                        'flags' => array('first' => false),
+                    ),
+                )
+            )
+        );
+
+        self::assertSame('doc_123', $curl->postFields['documentId']);
+        self::assertSame('true', $curl->postFields['jsonResponse']);
+        self::assertSame('acceptance', $curl->postFields['metadata[suite]']);
+        self::assertSame('false', $curl->postFields['metadata[flags][first]']);
+    }
+
     public function testSendSupportsGetRequestWithoutBody(): void
     {
         $curl = new FakeCurlClient();
