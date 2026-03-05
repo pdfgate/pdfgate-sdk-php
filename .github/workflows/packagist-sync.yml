@@ -1,0 +1,54 @@
+name: Packagist Sync
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate required secrets
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PACKAGIST_USERNAME}" ] || [ -z "${PACKAGIST_TOKEN}" ]; then
+            echo "PACKAGIST_USERNAME and PACKAGIST_TOKEN must be configured as repository secrets."
+            exit 1
+          fi
+
+      - name: Notify Packagist
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          payload='{"repository":"https://github.com/pdfgate/pdfgate-sdk-php"}'
+
+          response_file=$(mktemp)
+          status_code=$(curl --silent --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "Authorization: Bearer ${PACKAGIST_USERNAME}:${PACKAGIST_TOKEN}" \
+            --data "$payload" \
+            https://packagist.org/api/update-package)
+
+          if [ "$status_code" -lt 200 ] || [ "$status_code" -ge 300 ]; then
+            echo "Packagist sync failed with status $status_code"
+            cat "$response_file"
+            exit 1
+          fi
+
+          echo "Packagist sync successful"
+          cat "$response_file"
