@@ -45,6 +45,25 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertSame('from_html', $response->getType());
     }
 
+    public function testUploadFileReturnsDocumentMetadata(): void
+    {
+        $uploadFilePath = __DIR__ . '/fixtures/upload-source.pdf';
+        if (!file_exists($uploadFilePath)) {
+            self::markTestSkipped('Missing acceptance fixture: tests/Acceptance/fixtures/upload-source.pdf');
+        }
+
+        $uploaded = self::$client->uploadFile(array(
+            'file' => new \CURLFile($uploadFilePath, 'application/pdf', 'upload-source.pdf'),
+            'metadata' => array('suite' => 'acceptance-upload'),
+        ));
+
+        self::assertNotSame('', $uploaded->getId());
+        self::assertSame('completed', $uploaded->getStatus());
+        self::assertSame('uploaded', $uploaded->getType());
+        self::assertNotNull($uploaded->getFileUrl());
+        self::assertGreaterThan(0, $uploaded->getSize());
+    }
+
     public function testFlattenPdfReturnsDocumentMetadata(): void
     {
         $flattened = self::$client->flattenPdf(array(

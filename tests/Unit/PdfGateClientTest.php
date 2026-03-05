@@ -166,6 +166,88 @@ final class PdfGateClientTest extends TestCase
         self::assertSame(true, $request->jsonBody['jsonResponse']);
     }
 
+    public function testUploadFileWithUrlEnforcesJsonResponseAndUsesUploadPath(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulUploadResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->uploadFile(array(
+            'url' => 'https://example.com/input.pdf',
+            'preSignedUrlExpiresIn' => 1200,
+            'metadata' => array('env' => 'test'),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/upload', parse_url($request->url, PHP_URL_PATH));
+        self::assertSame('https://api-sandbox.pdfgate.com/upload', $request->url);
+        self::assertSame('https://example.com/input.pdf', $request->jsonBody['url']);
+        self::assertSame(1200, $request->jsonBody['preSignedUrlExpiresIn']);
+        self::assertSame(array('env' => 'test'), $request->jsonBody['metadata']);
+        self::assertSame(true, $request->jsonBody['jsonResponse']);
+        self::assertNull($request->multipartBody);
+    }
+
+    public function testUploadFileWithFileUsesMultipartAndEnforcesJsonResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulUploadResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+        $file = new \CURLFile(__FILE__, 'application/pdf', 'source.pdf');
+
+        $client->uploadFile(array(
+            'file' => $file,
+            'preSignedUrlExpiresIn' => 1200,
+            'metadata' => array('env' => 'test'),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/upload', parse_url($request->url, PHP_URL_PATH));
+        self::assertSame('https://api-sandbox.pdfgate.com/upload', $request->url);
+        self::assertNull($request->jsonBody);
+        self::assertSame($file, $request->multipartBody['file']);
+        self::assertSame(1200, $request->multipartBody['preSignedUrlExpiresIn']);
+        self::assertSame(array('env' => 'test'), $request->multipartBody['metadata']);
+        self::assertSame(true, $request->multipartBody['jsonResponse']);
+    }
+
+    public function testUploadFilePrioritizesFileOverUrlWhenBothProvided(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulUploadResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+        $file = new \CURLFile(__FILE__, 'application/pdf', 'source.pdf');
+
+        $client->uploadFile(array(
+            'file' => $file,
+            'url' => 'https://example.com/ignored.pdf',
+            'metadata' => array('env' => 'test'),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertNull($request->jsonBody);
+        self::assertSame($file, $request->multipartBody['file']);
+        self::assertArrayNotHasKey('url', $request->multipartBody);
+        self::assertSame(true, $request->multipartBody['jsonResponse']);
+    }
+
+    public function testUploadFileReturnsTypedResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulUploadResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->uploadFile(array('url' => 'https://example.com/input.pdf'));
+
+        self::assertInstanceOf(PdfGateDocumentMetadata::class, $response);
+        self::assertSame('6642381c5c61', $response->getId());
+        self::assertSame('completed', $response->getStatus());
+        self::assertSame('uploaded', $response->getType());
+        self::assertSame('https://api.pdfgate.com/file/open/token', $response->getFileUrl());
+        self::assertSame(1620006, $response->getSize());
+        self::assertSame('2024-02-13T15:56:12.607Z', $response->getCreatedAt());
+        self::assertSame('68f920bacfe16de217f019as', $response->getDerivedFrom());
+    }
+
     public function testFlattenPdfEnforcesJsonResponseAndUsesFlattenPath(): void
     {
         $transport = new RecordingTransport(new HttpResponse(201, $this->successfulFlattenResponseBody()));
@@ -455,6 +537,11 @@ final class PdfGateClientTest extends TestCase
     private function successfulFlattenResponseBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","type":"flattened","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z","derivedFrom":"68f920bacfe16de217f019as"}';
+    }
+
+    private function successfulUploadResponseBody(): string
+    {
+        return '{"id":"6642381c5c61","status":"completed","type":"uploaded","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z","derivedFrom":"68f920bacfe16de217f019as"}';
     }
 
     private function successfulWatermarkResponseBody(): string

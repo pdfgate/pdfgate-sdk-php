@@ -15,6 +15,7 @@ use PdfGate\Http\HttpTransportInterface;
  * PDFGate API client.
  *
  * @phpstan-import-type GeneratePdfRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type UploadFileRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type FlattenPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type CompressPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ProtectPdfRequestPayload from \PdfGate\Type\Types
@@ -76,6 +77,28 @@ class PdfGateClient
         $request['jsonResponse'] = true;
 
         $response = $this->requestHandler->postJsonResponse('/v1/generate/pdf', $request);
+
+        return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
+     * Uploads a raw PDF file or URL source.
+     *
+     * @param UploadFileRequestPayload $request Upload request payload.
+     * @return PdfGateDocumentMetadata
+     */
+    public function uploadFile(array $request): PdfGateDocumentMetadata
+    {
+        $request['jsonResponse'] = true;
+
+        if (isset($request['file'])) {
+            unset($request['url']);
+            $response = $this->requestHandler->postMultipartJsonResponse('/upload', $request);
+
+            return PdfGateDocumentMetadata::fromArray($response);
+        }
+
+        $response = $this->requestHandler->postJsonResponse('/upload', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }

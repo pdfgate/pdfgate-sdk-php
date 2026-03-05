@@ -94,6 +94,35 @@ $client->generatePdf(
 );
 ```
 
+### Upload PDF
+
+`uploadFile()` sends `jsonResponse=true` automatically.
+If both `file` and `url` are provided, the SDK prioritizes `file` and sends multipart form data.
+
+Upload from file:
+
+```php
+$client->uploadFile(
+    [
+        'file' => new \CURLFile('/absolute/path/source.pdf', 'application/pdf', 'source.pdf'),
+        'preSignedUrlExpiresIn' => 1200,
+        'metadata' => ['source' => 'sdk'],
+    ]
+);
+```
+
+Upload from URL:
+
+```php
+$client->uploadFile(
+    [
+        'url' => 'https://example.com/source.pdf',
+        'preSignedUrlExpiresIn' => 1200,
+        'metadata' => ['source' => 'sdk'],
+    ]
+);
+```
+
 ### Flatten PDF
 
 ```php
@@ -209,6 +238,7 @@ fclose($stream);
 ```
 
 To download generated files, enable **Save files for one month** in PDFGate Dashboard settings (disabled by default).
+The same setting also applies to uploaded files.
 
 ## Error handling
 

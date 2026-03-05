@@ -118,6 +118,30 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame('completed', $result['status']);
     }
 
+    public function testPostMultipartJsonResponseSupportsUploadEndpoint(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_upload_123","status":"completed"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+        $file = new \CURLFile(__FILE__, 'application/pdf', 'upload.pdf');
+
+        $handler->postMultipartJsonResponse('/upload', array(
+            'file' => $file,
+            'jsonResponse' => true,
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('POST', $request->method);
+        self::assertSame('https://api.pdfgate.com/upload', $request->url);
+        self::assertNull($request->jsonBody);
+        self::assertSame($file, $request->multipartBody['file']);
+        self::assertSame(true, $request->multipartBody['jsonResponse']);
+    }
+
     public function testGetJsonResponseSendsGetRequestWithQueryAndAuthHeader(): void
     {
         $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_123"}'));
