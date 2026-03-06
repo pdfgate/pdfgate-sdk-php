@@ -32,7 +32,6 @@ class CurlHttpTransport implements HttpTransportInterface
         }
 
         $headers = $request->getHeaders();
-        $headerList = array();
 
         if ($request->getJsonBody() !== null) {
             $json = json_encode($request->getJsonBody());
@@ -66,16 +65,19 @@ class CurlHttpTransport implements HttpTransportInterface
             }
         }
 
+        $headerList = array();
         foreach ($headers as $name => $value) {
             $headerList[] = $name . ': ' . $value;
         }
 
-        if ($this->curlClient->setOptArray($ch, array(
-            CURLOPT_URL => $request->getUrl(),
-            CURLOPT_CUSTOMREQUEST => $request->getMethod(),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => $headerList,
-        )) === false) {
+        if (
+            $this->curlClient->setOptArray($ch, array(
+                CURLOPT_URL => $request->getUrl(),
+                CURLOPT_CUSTOMREQUEST => $request->getMethod(),
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => $headerList,
+            )) === false
+        ) {
             if (PHP_VERSION_ID < 80000) {
                 $this->curlClient->close($ch);
             }
@@ -85,7 +87,6 @@ class CurlHttpTransport implements HttpTransportInterface
 
         $responseBody = $this->curlClient->exec($ch);
 
-        # Parse response
         if ($responseBody === false) {
             $error = $this->curlClient->error($ch);
 
