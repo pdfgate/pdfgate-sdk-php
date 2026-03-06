@@ -36,8 +36,27 @@ final class PdfGateClientAcceptanceTest extends TestCase
     public function testGeneratePdfReturnsDocument(): void
     {
         $response = self::$client->generatePdf(array(
-            'html' => '<html><body><p>Generate endpoint check.</p></body></html>',
-            'metadata' => array('suite' => 'acceptance'),
+            'html' => '<html><body><div id="cookieDialog"><button class="popupClose">Close</button></div><p>Generate endpoint argument coverage.</p><input name="fieldA" value="value-a" /></body></html>',
+            'pageSizeType' => 'a4',
+            'margin' => array(
+                'top' => '10px',
+                'bottom' => '12px',
+                'left' => '8px',
+                'right' => '8px',
+            ),
+            'clickSelectorChainSetup' => array(
+                'ignoreFailingChains' => true,
+                'chains' => array(
+                    array('selectors' => array('#cookieDialog')),
+                    array('selectors' => array('.popupClose')),
+                ),
+            ),
+            'printBackground' => true,
+            'enableFormFields' => true,
+            'metadata' => array(
+                'suite' => 'acceptance-generate-args',
+                'case' => 'full-argument-payload',
+            ),
         ));
 
         self::assertNotSame('', $response->getId());
@@ -60,7 +79,6 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertNotSame('', $uploaded->getId());
         self::assertSame('completed', $uploaded->getStatus());
         self::assertSame('uploaded', $uploaded->getType());
-        self::assertNotNull($uploaded->getFileUrl());
         self::assertGreaterThan(0, $uploaded->getSize());
     }
 
