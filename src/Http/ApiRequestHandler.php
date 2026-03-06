@@ -157,6 +157,11 @@ class ApiRequestHandler
             throw new TransportException('Expected JSON object response body.');
         }
 
+        // Decode as object first so we can reject top-level JSON arrays, then
+        // convert to array for SDK return shape.
+        // If associative=true would be used for json_decode, then both {} and
+        // [] would decode to PHP arrays and there'd be no way to differentiate
+        // them.
         /** @var array<string,mixed> $decodedArray */
         $decodedArray = get_object_vars($decoded);
         return $decodedArray;
