@@ -75,6 +75,6 @@ final class HttpRequestTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('HttpRequest is immutable.');
 
-        $request->jsonBody = array('html' => '<p>Changed</p>');
+        $request->__set('jsonBody', array('html' => '<p>Changed</p>'));
     }
 }
