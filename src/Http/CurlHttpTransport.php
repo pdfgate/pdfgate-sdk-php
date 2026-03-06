@@ -34,14 +34,6 @@ class CurlHttpTransport implements HttpTransportInterface
         $headers = $request->getHeaders();
         $headerList = array();
 
-        if ($request->getMethod() === 'GET' && ($request->getJsonBody() !== null || $request->getMultipartBody() !== null)) {
-            if (PHP_VERSION_ID < 80000) {
-                $this->curlClient->close($ch);
-            }
-
-            throw new RuntimeException('GET request cannot contain a request body.');
-        }
-
         if ($request->getJsonBody() !== null) {
             $json = json_encode($request->getJsonBody());
 
