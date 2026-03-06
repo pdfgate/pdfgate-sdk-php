@@ -150,7 +150,7 @@ class ApiRequestHandler
         try {
             $decoded = json_decode($body, false, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
-            throw new TransportException('Failed to decode JSON response body.', 0, $e);
+            throw TransportException::causedBy($e, 'Failed to decode JSON response body.');
         }
 
         if (!is_object($decoded)) {
@@ -171,17 +171,7 @@ class ApiRequestHandler
         try {
             $response = $this->transport->send($request);
         } catch (Throwable $e) {
-            throw new TransportException(
-                sprintf(
-                    'Failed to complete request %s %s. Cause: %s: %s',
-                    $request->method,
-                    $request->url,
-                    get_class($e),
-                    $e->getMessage()
-                ),
-                (int) $e->getCode(),
-                $e
-            );
+            throw TransportException::forRequestFailure($request->method, $request->url, $e);
         }
 
         if ($response->statusCode < 200 || $response->statusCode >= 300) {
