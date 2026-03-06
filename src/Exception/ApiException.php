@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace PdfGate\Exception;
 
-use Throwable;
-
 /**
  * Thrown when PDFGate returns a non-2xx HTTP response.
  */
@@ -20,25 +18,19 @@ class ApiException extends PdfGateException
     /**
      * @param int $statusCode HTTP response status code.
      * @param string $responseBody Truncated response body.
-     * @param string $message Exception message.
-     * @param Throwable|null $previous Wrapped root cause.
      */
-    public function __construct(int $statusCode, string $responseBody, string $message = '', ?Throwable $previous = null)
+    public function __construct(int $statusCode, string $responseBody)
     {
         $this->statusCode = $statusCode;
         $this->responseBody = $responseBody;
 
-        if ($message === '') {
-            $message = sprintf(
-                'PDFGate API request failed with status %d. Response body: %s',
-                $statusCode,
-                $responseBody
-            );
-        } else {
-            $message = sprintf('%s Response body: %s', rtrim($message, '.'), $responseBody);
-        }
+        $message = sprintf(
+            'PDFGate API request failed with status %d. Response body: %s',
+            $statusCode,
+            $responseBody
+        );
 
-        parent::__construct($message, 0, $previous);
+        parent::__construct($message);
     }
 
     /**

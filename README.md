@@ -246,6 +246,7 @@ Non-2xx responses throw `PdfGate\Exception\ApiException` with:
 
 - `getStatusCode()`
 - `getResponseBody()` (truncated)
+- an auto-generated message that includes the status code and truncated response body
 
 Transport and parsing failures throw `PdfGate\Exception\TransportException` and preserve original causes.
 
