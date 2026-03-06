@@ -10,7 +10,7 @@ use PdfGate\Exception\TransportException;
 use Throwable;
 
 /**
- * Handles authenticated API requests and response parsing.
+ * Handles authenticated API requests with response parsing and error handling.
  */
 class ApiRequestHandler
 {
