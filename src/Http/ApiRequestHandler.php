@@ -49,7 +49,6 @@ class ApiRequestHandler
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
             ->withPath($path)
-            ->withQuery([])
             ->build();
         $request = HttpRequest::makePostJson(
             $url,
@@ -74,7 +73,6 @@ class ApiRequestHandler
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
             ->withPath($path)
-            ->withQuery([])
             ->build();
         $request = HttpRequest::makePostMultipart(
             $url,
@@ -122,7 +120,6 @@ class ApiRequestHandler
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
             ->withPath($path)
-            ->withQuery([])
             ->build();
         $request = HttpRequest::makeGet(
             $url,
