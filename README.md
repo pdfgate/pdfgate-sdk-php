@@ -78,7 +78,7 @@ fclose($output);
 fclose($stream);
 ```
 
-For complete operation examples (`flattenPdf`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`), see [Operations](docs/guides/operations.md).
+For complete operation examples (`flattenPdf`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`), see [API](docs/guides/API.md).
 
 To download generated files, enable **Save files for one month** in PDFGate Dashboard settings.
 
