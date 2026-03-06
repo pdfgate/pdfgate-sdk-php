@@ -11,3 +11,13 @@ This SDK supports the PHP versions listed in [README.md](README.md#requirements)
 ## Development setup and release process
 
 Please use the [Development](README.md#development) section in `README.md` for local setup, test commands, and release/tagging instructions.
+
+## Documentation and tests for public API changes
+
+If a pull request changes public SDK behavior (new method, changed payload, changed exception behavior, or modified response handling), it must include:
+
+- Inline PHPDoc updates in `src/` for affected public APIs (`@param`, `@return`, `@throws` as needed).
+- Curated documentation updates in `README.md` and/or `docs/` guides/reference pages.
+- Tests that cover the changed behavior.
+
+Public API changes are considered incomplete until code, tests, and documentation are all updated together.
