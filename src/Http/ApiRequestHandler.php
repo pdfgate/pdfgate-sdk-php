@@ -176,7 +176,7 @@ class ApiRequestHandler
         try {
             $response = $this->transport->send($request);
         } catch (Throwable $e) {
-            throw TransportException::forRequestFailure($request->method, $request->url, $e);
+            throw TransportException::forRequestFailure($request->getMethod(), $request->getUrl(), $e);
         }
 
         if ($response->statusCode < 200 || $response->statusCode >= 300) {

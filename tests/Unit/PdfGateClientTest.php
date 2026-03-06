@@ -33,10 +33,10 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('/v1/generate/pdf', parse_url($request->url, PHP_URL_PATH));
-        self::assertSame(true, $request->jsonBody['jsonResponse']);
-        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
-        self::assertSame('https://api-sandbox.pdfgate.com/v1/generate/pdf', $request->url);
+        self::assertSame('/v1/generate/pdf', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame(true, $request->getJsonBody()['jsonResponse']);
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertSame('https://api-sandbox.pdfgate.com/v1/generate/pdf', $request->getUrl());
     }
 
     public function testGeneratePdfReturnsTypedResponse(): void
@@ -75,7 +75,7 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('https://api.pdfgate.com/v1/generate/pdf', $request->url);
+        self::assertSame('https://api.pdfgate.com/v1/generate/pdf', $request->getUrl());
     }
 
     public function testTestApiKeyUsesSandboxBaseUrl(): void
@@ -87,7 +87,7 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('https://api-sandbox.pdfgate.com/v1/generate/pdf', $request->url);
+        self::assertSame('https://api-sandbox.pdfgate.com/v1/generate/pdf', $request->getUrl());
     }
 
     public function testConstructorRejectsUnknownApiKeyPrefix(): void
@@ -151,8 +151,8 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('<p>Hello</p>', $request->jsonBody['html']);
-        self::assertSame('a4', $request->jsonBody['pageSizeType']);
+        self::assertSame('<p>Hello</p>', $request->getJsonBody()['html']);
+        self::assertSame('a4', $request->getJsonBody()['pageSizeType']);
         self::assertSame(
             array(
                 'top' => '10px',
@@ -160,10 +160,10 @@ final class PdfGateClientTest extends TestCase
                 'left' => '8px',
                 'right' => '8px',
             ),
-            $request->jsonBody['margin']
+            $request->getJsonBody()['margin']
         );
-        self::assertSame(array('env' => 'test'), $request->jsonBody['metadata']);
-        self::assertSame(true, $request->jsonBody['jsonResponse']);
+        self::assertSame(array('env' => 'test'), $request->getJsonBody()['metadata']);
+        self::assertSame(true, $request->getJsonBody()['jsonResponse']);
     }
 
     public function testUploadFileWithUrlEnforcesJsonResponseAndUsesUploadPath(): void
@@ -179,13 +179,13 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('/upload', parse_url($request->url, PHP_URL_PATH));
-        self::assertSame('https://api-sandbox.pdfgate.com/upload', $request->url);
-        self::assertSame('https://example.com/input.pdf', $request->jsonBody['url']);
-        self::assertSame(1200, $request->jsonBody['preSignedUrlExpiresIn']);
-        self::assertSame(array('env' => 'test'), $request->jsonBody['metadata']);
-        self::assertSame(true, $request->jsonBody['jsonResponse']);
-        self::assertNull($request->multipartBody);
+        self::assertSame('/upload', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('https://api-sandbox.pdfgate.com/upload', $request->getUrl());
+        self::assertSame('https://example.com/input.pdf', $request->getJsonBody()['url']);
+        self::assertSame(1200, $request->getJsonBody()['preSignedUrlExpiresIn']);
+        self::assertSame(array('env' => 'test'), $request->getJsonBody()['metadata']);
+        self::assertSame(true, $request->getJsonBody()['jsonResponse']);
+        self::assertNull($request->getMultipartBody());
     }
 
     public function testUploadFileWithFileUsesMultipartAndEnforcesJsonResponse(): void
@@ -202,13 +202,13 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('/upload', parse_url($request->url, PHP_URL_PATH));
-        self::assertSame('https://api-sandbox.pdfgate.com/upload', $request->url);
-        self::assertNull($request->jsonBody);
-        self::assertSame($file, $request->multipartBody['file']);
-        self::assertSame(1200, $request->multipartBody['preSignedUrlExpiresIn']);
-        self::assertSame(array('env' => 'test'), $request->multipartBody['metadata']);
-        self::assertSame(true, $request->multipartBody['jsonResponse']);
+        self::assertSame('/upload', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('https://api-sandbox.pdfgate.com/upload', $request->getUrl());
+        self::assertNull($request->getJsonBody());
+        self::assertSame($file, $request->getMultipartBody()['file']);
+        self::assertSame(1200, $request->getMultipartBody()['preSignedUrlExpiresIn']);
+        self::assertSame(array('env' => 'test'), $request->getMultipartBody()['metadata']);
+        self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
     }
 
     public function testUploadFilePrioritizesFileOverUrlWhenBothProvided(): void
@@ -225,10 +225,10 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertNull($request->jsonBody);
-        self::assertSame($file, $request->multipartBody['file']);
-        self::assertArrayNotHasKey('url', $request->multipartBody);
-        self::assertSame(true, $request->multipartBody['jsonResponse']);
+        self::assertNull($request->getJsonBody());
+        self::assertSame($file, $request->getMultipartBody()['file']);
+        self::assertArrayNotHasKey('url', $request->getMultipartBody());
+        self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
     }
 
     public function testUploadFileReturnsTypedResponse(): void
@@ -257,11 +257,11 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('/forms/flatten', parse_url($request->url, PHP_URL_PATH));
-        self::assertSame('68f920bacfe16de217f019as', $request->jsonBody['documentId']);
-        self::assertSame(true, $request->jsonBody['jsonResponse']);
-        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
-        self::assertSame('https://api-sandbox.pdfgate.com/forms/flatten', $request->url);
+        self::assertSame('/forms/flatten', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('68f920bacfe16de217f019as', $request->getJsonBody()['documentId']);
+        self::assertSame(true, $request->getJsonBody()['jsonResponse']);
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertSame('https://api-sandbox.pdfgate.com/forms/flatten', $request->getUrl());
     }
 
     public function testFlattenPdfReturnsTypedResponseWithDerivedFrom(): void
@@ -294,10 +294,10 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('68f920bacfe16de217f019as', $request->jsonBody['documentId']);
-        self::assertSame(1200, $request->jsonBody['preSignedUrlExpiresIn']);
-        self::assertSame(array('env' => 'test'), $request->jsonBody['metadata']);
-        self::assertSame(true, $request->jsonBody['jsonResponse']);
+        self::assertSame('68f920bacfe16de217f019as', $request->getJsonBody()['documentId']);
+        self::assertSame(1200, $request->getJsonBody()['preSignedUrlExpiresIn']);
+        self::assertSame(array('env' => 'test'), $request->getJsonBody()['metadata']);
+        self::assertSame(true, $request->getJsonBody()['jsonResponse']);
     }
 
     public function testWatermarkPdfEnforcesJsonResponseAndUsesWatermarkPath(): void
@@ -313,10 +313,10 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('/watermark/pdf', parse_url($request->url, PHP_URL_PATH));
-        self::assertSame(null, $request->jsonBody);
-        self::assertSame(true, $request->multipartBody['jsonResponse']);
-        self::assertSame('https://api-sandbox.pdfgate.com/watermark/pdf', $request->url);
+        self::assertSame('/watermark/pdf', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame(null, $request->getJsonBody());
+        self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
+        self::assertSame('https://api-sandbox.pdfgate.com/watermark/pdf', $request->getUrl());
     }
 
     public function testWatermarkPdfForcesJsonResponse(): void
@@ -340,7 +340,7 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame(true, $request->multipartBody['jsonResponse']);
+        self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
     }
 
     public function testWatermarkPdfReturnsTypedResponseWithDerivedFrom(): void
@@ -373,12 +373,12 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('GET', $request->method);
-        self::assertSame('/document/68f920bacfe16de217f019as', parse_url($request->url, PHP_URL_PATH));
-        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
-        self::assertSame('https://api-sandbox.pdfgate.com/document/68f920bacfe16de217f019as', $request->url);
-        self::assertSame(null, $request->jsonBody);
-        self::assertSame(null, $request->multipartBody);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('/document/68f920bacfe16de217f019as', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertSame('https://api-sandbox.pdfgate.com/document/68f920bacfe16de217f019as', $request->getUrl());
+        self::assertSame(null, $request->getJsonBody());
+        self::assertSame(null, $request->getMultipartBody());
     }
 
     public function testGetDocumentAppendsQueryParameters(): void
@@ -392,7 +392,7 @@ final class PdfGateClientTest extends TestCase
         self::assertNotNull($request);
         self::assertSame(
             'https://api-sandbox.pdfgate.com/document/68f920bacfe16de217f019as?preSignedUrlExpiresIn=1200',
-            $request->url
+            $request->getUrl()
         );
     }
 
@@ -405,7 +405,7 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('/document/doc%2Fid%20with%20spaces', parse_url($request->url, PHP_URL_PATH));
+        self::assertSame('/document/doc%2Fid%20with%20spaces', parse_url($request->getUrl(), PHP_URL_PATH));
     }
 
     public function testGetDocumentReturnsTypedResponseWhenTypeMissing(): void
@@ -464,10 +464,10 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('GET', $request->method);
-        self::assertSame('/file/doc_123', parse_url($request->url, PHP_URL_PATH));
-        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
-        self::assertSame('https://api-sandbox.pdfgate.com/file/doc_123', $request->url);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('/file/doc_123', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertSame('https://api-sandbox.pdfgate.com/file/doc_123', $request->getUrl());
     }
 
     public function testGetFileUsesProductionBaseUrlForLiveApiKey(): void
@@ -480,7 +480,7 @@ final class PdfGateClientTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('https://api.pdfgate.com/file/doc_live', $request->url);
+        self::assertSame('https://api.pdfgate.com/file/doc_live', $request->getUrl());
     }
 
     public function testGetFileRejectsEmptyDocumentId(): void

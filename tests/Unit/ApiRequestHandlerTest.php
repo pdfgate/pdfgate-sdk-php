@@ -90,14 +90,14 @@ final class ApiRequestHandlerTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('POST', $request->method);
-        self::assertSame('https://api.pdfgate.com/watermark/pdf', $request->url);
-        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
-        self::assertSame(null, $request->jsonBody);
-        self::assertSame('source_123', $request->multipartBody['documentId']);
-        self::assertSame('text', $request->multipartBody['type']);
-        self::assertSame('watermark', $request->multipartBody['text']);
-        self::assertSame(true, $request->multipartBody['jsonResponse']);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/watermark/pdf', $request->getUrl());
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertSame(null, $request->getJsonBody());
+        self::assertSame('source_123', $request->getMultipartBody()['documentId']);
+        self::assertSame('text', $request->getMultipartBody()['type']);
+        self::assertSame('watermark', $request->getMultipartBody()['text']);
+        self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
     }
 
     public function testPostMultipartJsonResponseDecodesJsonObjectResponse(): void
@@ -135,11 +135,11 @@ final class ApiRequestHandlerTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('POST', $request->method);
-        self::assertSame('https://api.pdfgate.com/upload', $request->url);
-        self::assertNull($request->jsonBody);
-        self::assertSame($file, $request->multipartBody['file']);
-        self::assertSame(true, $request->multipartBody['jsonResponse']);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/upload', $request->getUrl());
+        self::assertNull($request->getJsonBody());
+        self::assertSame($file, $request->getMultipartBody()['file']);
+        self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
     }
 
     public function testGetJsonResponseSendsGetRequestWithQueryAndAuthHeader(): void
@@ -155,14 +155,14 @@ final class ApiRequestHandlerTest extends TestCase
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('GET', $request->method);
+        self::assertSame('GET', $request->getMethod());
         self::assertSame(
             'https://api.pdfgate.com/document/doc_123?preSignedUrlExpiresIn=1200',
-            $request->url
+            $request->getUrl()
         );
-        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
-        self::assertSame(null, $request->jsonBody);
-        self::assertSame(null, $request->multipartBody);
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertSame(null, $request->getJsonBody());
+        self::assertSame(null, $request->getMultipartBody());
     }
 
     public function testGetJsonResponseDecodesJsonObjectResponse(): void
@@ -193,11 +193,11 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame('%PDF-1.7 binary', $result);
         $request = $transport->lastRequest;
         self::assertNotNull($request);
-        self::assertSame('GET', $request->method);
-        self::assertSame('https://api.pdfgate.com/file/doc_123', $request->url);
-        self::assertSame('Bearer test_key_123', $request->headers['Authorization']);
-        self::assertNull($request->jsonBody);
-        self::assertNull($request->multipartBody);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/file/doc_123', $request->getUrl());
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertNull($request->getJsonBody());
+        self::assertNull($request->getMultipartBody());
     }
 
     public function testGetBinaryResponseThrowsApiExceptionOnNonSuccessStatusCode(): void

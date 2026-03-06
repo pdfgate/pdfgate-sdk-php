@@ -31,18 +31,10 @@ class CurlHttpTransport implements HttpTransportInterface
             throw new RuntimeException('Failed to initialize cURL.');
         }
 
-        $headers = $request->headers;
+        $headers = $request->getHeaders();
         $headerList = array();
 
-        if ($request->jsonBody !== null && $request->multipartBody !== null) {
-            if (PHP_VERSION_ID < 80000) {
-                $this->curlClient->close($ch);
-            }
-
-            throw new RuntimeException('HTTP request cannot contain both JSON and multipart body.');
-        }
-
-        if ($request->method === 'GET' && ($request->jsonBody !== null || $request->multipartBody !== null)) {
+        if ($request->getMethod() === 'GET' && ($request->getJsonBody() !== null || $request->getMultipartBody() !== null)) {
             if (PHP_VERSION_ID < 80000) {
                 $this->curlClient->close($ch);
             }
@@ -50,8 +42,8 @@ class CurlHttpTransport implements HttpTransportInterface
             throw new RuntimeException('GET request cannot contain a request body.');
         }
 
-        if ($request->jsonBody !== null) {
-            $json = json_encode($request->jsonBody);
+        if ($request->getJsonBody() !== null) {
+            $json = json_encode($request->getJsonBody());
 
             if ($json === false) {
                 if (PHP_VERSION_ID < 80000) {
@@ -71,8 +63,8 @@ class CurlHttpTransport implements HttpTransportInterface
             }
         }
 
-        if ($request->multipartBody !== null) {
-            $multipartBody = $this->normalizeMultipartBody($request->multipartBody);
+        if ($request->getMultipartBody() !== null) {
+            $multipartBody = $this->normalizeMultipartBody($request->getMultipartBody());
             if ($this->curlClient->setOpt($ch, CURLOPT_POSTFIELDS, $multipartBody) === false) {
                 if (PHP_VERSION_ID < 80000) {
                     $this->curlClient->close($ch);
@@ -87,8 +79,8 @@ class CurlHttpTransport implements HttpTransportInterface
         }
 
         if ($this->curlClient->setOptArray($ch, array(
-            CURLOPT_URL => $request->url,
-            CURLOPT_CUSTOMREQUEST => $request->method,
+            CURLOPT_URL => $request->getUrl(),
+            CURLOPT_CUSTOMREQUEST => $request->getMethod(),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => $headerList,
         )) === false) {

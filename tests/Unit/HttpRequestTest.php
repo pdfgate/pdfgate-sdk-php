@@ -6,6 +6,7 @@ namespace PdfGate\Tests\Unit;
 
 use PdfGate\Http\HttpRequest;
 use PHPUnit\Framework\TestCase;
+use LogicException;
 
 final class HttpRequestTest extends TestCase
 {
@@ -16,11 +17,11 @@ final class HttpRequestTest extends TestCase
             array('Authorization' => 'Bearer x')
         );
 
-        self::assertSame('GET', $request->method);
-        self::assertSame('https://api.pdfgate.com/file/doc_123', $request->url);
-        self::assertSame(array('Authorization' => 'Bearer x'), $request->headers);
-        self::assertNull($request->jsonBody);
-        self::assertNull($request->multipartBody);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/file/doc_123', $request->getUrl());
+        self::assertSame(array('Authorization' => 'Bearer x'), $request->getHeaders());
+        self::assertNull($request->getJsonBody());
+        self::assertNull($request->getMultipartBody());
     }
 
     public function testMakePostJsonSetsJsonBodyOnly(): void
@@ -31,11 +32,11 @@ final class HttpRequestTest extends TestCase
             array('jsonResponse' => true)
         );
 
-        self::assertSame('POST', $request->method);
-        self::assertSame('https://api.pdfgate.com/watermark/pdf', $request->url);
-        self::assertSame(array('Authorization' => 'Bearer x'), $request->headers);
-        self::assertSame(array('jsonResponse' => true), $request->jsonBody);
-        self::assertNull($request->multipartBody);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/watermark/pdf', $request->getUrl());
+        self::assertSame(array('Authorization' => 'Bearer x'), $request->getHeaders());
+        self::assertSame(array('jsonResponse' => true), $request->getJsonBody());
+        self::assertNull($request->getMultipartBody());
     }
 
     public function testMakePostMultipartSetsMultipartBodyOnly(): void
@@ -46,11 +47,11 @@ final class HttpRequestTest extends TestCase
             array('documentId' => 'doc_123')
         );
 
-        self::assertSame('POST', $request->method);
-        self::assertSame('https://api.pdfgate.com/watermark/pdf', $request->url);
-        self::assertSame(array('Authorization' => 'Bearer x'), $request->headers);
-        self::assertSame(array('documentId' => 'doc_123'), $request->multipartBody);
-        self::assertNull($request->jsonBody);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/watermark/pdf', $request->getUrl());
+        self::assertSame(array('Authorization' => 'Bearer x'), $request->getHeaders());
+        self::assertSame(array('documentId' => 'doc_123'), $request->getMultipartBody());
+        self::assertNull($request->getJsonBody());
     }
 
     public function testMakeGetSetsNoRequestBody(): void
@@ -60,10 +61,20 @@ final class HttpRequestTest extends TestCase
             array('Authorization' => 'Bearer x')
         );
 
-        self::assertSame('GET', $request->method);
-        self::assertSame('https://api.pdfgate.com/document/doc_123?preSignedUrlExpiresIn=1200', $request->url);
-        self::assertSame(array('Authorization' => 'Bearer x'), $request->headers);
-        self::assertNull($request->jsonBody);
-        self::assertNull($request->multipartBody);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/document/doc_123?preSignedUrlExpiresIn=1200', $request->getUrl());
+        self::assertSame(array('Authorization' => 'Bearer x'), $request->getHeaders());
+        self::assertNull($request->getJsonBody());
+        self::assertNull($request->getMultipartBody());
+    }
+
+    public function testRequestCannotBeMutatedFromOutside(): void
+    {
+        $request = HttpRequest::makePostJson('https://api.pdfgate.com/v1/generate/pdf');
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('HttpRequest is immutable.');
+
+        $request->jsonBody = array('html' => '<p>Changed</p>');
     }
 }

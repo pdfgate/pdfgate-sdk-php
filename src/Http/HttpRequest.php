@@ -4,25 +4,27 @@ declare(strict_types=1);
 
 namespace PdfGate\Http;
 
+use LogicException;
+
 /**
  * Immutable HTTP request used by transport implementations.
  */
 class HttpRequest
 {
     /** @var string */
-    public $method;
+    private $method;
 
     /** @var string */
-    public $url;
+    private $url;
 
     /** @var array<string,string> */
-    public $headers;
+    private $headers;
 
     /** @var array<string,mixed>|null */
-    public $jsonBody;
+    private $jsonBody;
 
     /** @var array<string,mixed>|null */
-    public $multipartBody;
+    private $multipartBody;
 
     /**
      * @param string $method HTTP method.
@@ -80,5 +82,52 @@ class HttpRequest
         array $headers = array()
     ): self {
         return new self('GET', $url, $headers, null, null);
+    }
+
+    public function getMethod(): string
+    {
+        return $this->method;
+    }
+
+    public function getUrl(): string
+    {
+        return $this->url;
+    }
+
+    /**
+     * @return array<string,string>
+     */
+    public function getHeaders(): array
+    {
+        return $this->headers;
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    public function getJsonBody(): ?array
+    {
+        return $this->jsonBody;
+    }
+
+    /**
+     * @return array<string,mixed>|null
+     */
+    public function getMultipartBody(): ?array
+    {
+        return $this->multipartBody;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    public function __set(string $name, $value): void
+    {
+        throw new LogicException('HttpRequest is immutable.');
+    }
+
+    public function __unset(string $name): void
+    {
+        throw new LogicException('HttpRequest is immutable.');
     }
 }
