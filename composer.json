@@ -11,7 +11,7 @@
   ],
   "homepage": "https://pdfgate.com",
   "support": {
-    "docs": "https://pdfgate.com/documentation",
+    "docs": "https://pdfgate.github.io/pdfgate-sdk-php/",
     "issues": "https://github.com/pdfgate/pdfgate-sdk-php/issues",
     "source": "https://github.com/pdfgate/pdfgate-sdk-php"
   },
@@ -45,11 +45,18 @@
     "test:unit": "phpunit --testsuite unit",
     "test:acceptance": "phpunit --testsuite acceptance",
     "test:coverage": "phpdbg -qrr vendor/bin/phpunit --testsuite unit --coverage-text --coverage-clover build/coverage/clover.xml",
+    "docs:api": "php scripts/generate-api-docs.php",
+    "docs:check-links": "php scripts/validate-doc-links.php",
+    "docs:build": [
+      "@docs:api",
+      "@docs:check-links"
+    ],
     "stan": "phpstan analyse",
     "check": [
       "composer validate --strict",
       "@stan",
-      "@test:unit"
+      "@test:unit",
+      "@docs:check-links"
     ]
   }
 }

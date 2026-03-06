@@ -12,8 +12,10 @@ PDFGate lets you generate, process, and secure PDFs via a simple API:
 - Flatten, compress, watermark, protect PDFs
 - Extract PDF form data
 
-📘 Documentation: https://pdfgate.com/documentation<br>
+🚀 SDK Documentation: https://pdfgate.github.io/pdfgate-sdk-php<br>
+📘 API Documentation: https://pdfgate.com/documentation<br>
 🔑 Dashboard & API keys: https://dashboard.pdfgate.com
+
 
 ## Requirements
 
@@ -27,7 +29,7 @@ PDFGate lets you generate, process, and secure PDFs via a simple API:
 composer require pdfgate/pdfgate-sdk-php
 ```
 
-## Quick start
+## Quick Start
 
 ```php
 <?php
@@ -36,223 +38,64 @@ use PdfGate\PdfGateClient;
 
 $client = new PdfGateClient('live_your_api_key');
 
-$generated = $client->generatePdf(
-    [
-        'url' => 'https://example.com',
-        'pageSizeType' => 'a4',
-    ]
-);
+$generated = $client->generatePdf([
+    'url' => 'https://example.com',
+    'pageSizeType' => 'a4',
+    'preSignedUrlExpiresIn' => 1200
+]);
 
-$flattened = $client->flattenPdf(
-    [
-        'documentId' => $generated->getId(),
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
-
-$document = $client->getDocument(
-    $flattened->getId(),
-    ['preSignedUrlExpiresIn' => 1200]
-);
-
-echo $document->getId();
+echo $generated->getFileUrl();
 ```
 
-The SDK selects the base URL from the API key prefix:
-
-- `live_` => `https://api.pdfgate.com`
-- `test_` => `https://api-sandbox.pdfgate.com`
-
-## Examples
-
+## Usage Examples
 
 ### Generate PDF
 
 ```php
-$client = new PdfGateClient('live_your_api_key');
-
-$client->generatePdf(
-    [
-        'html' => '<h1>Hello</h1>',
-        'pageSizeType' => 'a4',
-        'margin' => [
-            'top' => '10px',
-            'bottom' => '10px',
-            'left' => '8px',
-            'right' => '8px',
-        ],
-        'clickSelectorChainSetup' => [
-            'ignoreFailingChains' => true,
-            'chains' => [
-                ['selectors' => ['#cookieDialog']],
-                ['selectors' => ['.popupClose']],
-            ],
-        ],
-        'printBackground' => true,
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
+$client->generatePdf([
+    'html' => '<h1>Hello</h1>',
+    'pageSizeType' => 'a4',
+    'metadata' => ['source' => 'sdk'],
+]);
 ```
 
 ### Upload PDF
 
-`uploadFile()` sends `jsonResponse=true` automatically.
-If both `file` and `url` are provided, the SDK prioritizes `file` and sends multipart form data.
-
-Upload from file:
-
 ```php
-$client->uploadFile(
-    [
-        'file' => new \CURLFile('/absolute/path/source.pdf', 'application/pdf', 'source.pdf'),
-        'preSignedUrlExpiresIn' => 1200,
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
+$client->uploadFile([
+    'file' => new \CURLFile('/absolute/path/source.pdf', 'application/pdf', 'source.pdf'),
+    'preSignedUrlExpiresIn' => 1200,
+]);
 ```
 
-Upload from URL:
+### Download File
 
 ```php
-$client->uploadFile(
-    [
-        'url' => 'https://example.com/source.pdf',
-        'preSignedUrlExpiresIn' => 1200,
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
-```
-
-### Flatten PDF
-
-```php
-$client->flattenPdf(
-    [
-        'documentId' => $id,
-        'preSignedUrlExpiresIn' => 1200,
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
-```
-
-### Compress PDF
-
-```php
-$client->compressPdf(
-    [
-        'documentId' => $id,
-        'linearize' => true,
-        'preSignedUrlExpiresIn' => 1200,
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
-```
-
-### Protect PDF
-
-```php
-$client->protectPdf(
-    [
-        'documentId' => $id,
-        'algorithm' => 'AES256', // API default is AES256 if omitted
-        'ownerPassword' => 'ownerPassword',
-        'userPassword' => 'userPassword',
-        'disablePrint' => true,
-        'disableCopy' => true,
-        'disableEditing' => true,
-        'encryptMetadata' => false,
-        'preSignedUrlExpiresIn' => 1200,
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
-```
-
-### Watermark PDF
-
-`watermarkPdf()` always sends multipart form data and forces `jsonResponse=true`.
-
-Text watermark:
-
-```php
-$client->watermarkPdf(
-    [
-        'documentId' => $id,
-        'type' => 'text',
-        'text' => 'Confidential',
-        'fontColor' => 'rgb(156, 50, 168)',
-        'rotate' => 30,
-        'opacity' => 0.2,
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
-```
-
-Image watermark:
-
-```php
-$client->watermarkPdf(
-    [
-        'documentId' => $id,
-        'type' => 'image',
-        'watermark' => new \CURLFile('/absolute/path/watermark.png'),
-        'imageWidth' => 120,
-        'imageHeight' => 120,
-        'opacity' => 0.2,
-        'metadata' => ['source' => 'sdk'],
-    ]
-);
-```
-
-Key fields: `documentId`, `type`, `text`, `watermark`, `fontFile`, `font`, `fontSize`, `fontColor`,
-`opacity`, `xPosition`, `yPosition`, `imageWidth`, `imageHeight`, `rotate`, `preSignedUrlExpiresIn`, `metadata`.
-
-### Extract PDF Form Data
-
-```php
-$client->extractPdfFormData(
-    [
-        'documentId' => $id,
-    ]
-);
-```
-
-### Get Document
-
-```php
-$client->getDocument(
-    $id,
-    [
-        'preSignedUrlExpiresIn' => 1200,
-    ]
-);
-```
-
-### Get File
-
-```php
-$stream = $client->getFile($id);
+$stream = $client->getFile($documentId);
 $output = fopen('output.pdf', 'wb');
 stream_copy_to_stream($stream, $output);
 fclose($output);
 fclose($stream);
 ```
 
-To download generated files, enable **Save files for one month** in PDFGate Dashboard settings (disabled by default).
-The same setting also applies to uploaded files.
+For complete operation examples (`flattenPdf`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`), see [Operations](docs/guides/operations.md).
 
-## Error handling
+To download generated files, enable **Save files for one month** in PDFGate Dashboard settings.
+
+## Error Handling
 
 Non-2xx responses throw `PdfGate\Exception\ApiException` with:
 
 - `getStatusCode()`
 - `getResponseBody()` (truncated)
-- an auto-generated message that includes the status code and truncated response body
 
 Transport and parsing failures throw `PdfGate\Exception\TransportException` and preserve original causes.
 
+See [Error handling guide](docs/guides/error-handling.md) for patterns and retry guidance.
+
 ## Development
 
-This section is the source of truth for setup, and testing.
+This section is the source of truth for setup and test commands.
 
 ### Local setup
 
@@ -265,19 +108,39 @@ composer install
 Unit tests:
 
 ```bash
-composer test -- --testsuite unit
+composer run test:unit
 ```
 
 Acceptance tests (real API calls):
 
 ```bash
-PDFGATE_API_KEY=your_key composer test -- --testsuite acceptance
+PDFGATE_API_KEY=your_key composer run test:acceptance
 ```
 
 ### Static analysis
 
-Run PHPStan:
-
 ```bash
 composer run stan
 ```
+
+### Build documentation
+
+Generate API docs (requires phpDocumentor in PATH, or `PHPDOC_BIN`):
+
+```bash
+composer run docs:api
+```
+
+Validate markdown links:
+
+```bash
+composer run docs:check-links
+```
+
+Run both:
+
+```bash
+composer run docs:build
+```
+
+API docs are generated into `build/docs/api` and published to GitHub Pages by CI.

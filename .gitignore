@@ -11,6 +11,6 @@
 vendor/
 composer.lock
 
-# Coverage
+# Generated artifacts
 
-build/coverage/
+build/
