@@ -76,7 +76,7 @@ class PdfGateClient
     {
         $request['jsonResponse'] = true;
 
-        $response = $this->requestHandler->postJsonResponse('/v1/generate/pdf', $request);
+        $response = $this->requestHandler->postJson('/v1/generate/pdf', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }
@@ -93,12 +93,12 @@ class PdfGateClient
 
         if (isset($request['file'])) {
             unset($request['url']);
-            $response = $this->requestHandler->postMultipartJsonResponse('/upload', $request);
+            $response = $this->requestHandler->postMultipart('/upload', $request);
 
             return PdfGateDocumentMetadata::fromArray($response);
         }
 
-        $response = $this->requestHandler->postJsonResponse('/upload', $request);
+        $response = $this->requestHandler->postJson('/upload', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }
@@ -113,7 +113,7 @@ class PdfGateClient
     {
         $request['jsonResponse'] = true;
 
-        $response = $this->requestHandler->postJsonResponse('/forms/flatten', $request);
+        $response = $this->requestHandler->postJson('/forms/flatten', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }
@@ -128,7 +128,7 @@ class PdfGateClient
     {
         $request['jsonResponse'] = true;
 
-        $response = $this->requestHandler->postJsonResponse('/compress/pdf', $request);
+        $response = $this->requestHandler->postJson('/compress/pdf', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }
@@ -143,7 +143,7 @@ class PdfGateClient
     {
         $request['jsonResponse'] = true;
 
-        $response = $this->requestHandler->postJsonResponse('/protect/pdf', $request);
+        $response = $this->requestHandler->postJson('/protect/pdf', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }
@@ -158,7 +158,7 @@ class PdfGateClient
     {
         $request['jsonResponse'] = true;
 
-        $response = $this->requestHandler->postMultipartJsonResponse('/watermark/pdf', $request);
+        $response = $this->requestHandler->postMultipart('/watermark/pdf', $request);
 
         return PdfGateDocumentMetadata::fromArray($response);
     }
@@ -173,7 +173,7 @@ class PdfGateClient
     {
         $request['jsonResponse'] = true;
 
-        return $this->requestHandler->postJsonResponse('/forms/extract-data', $request);
+        return $this->requestHandler->postJson('/forms/extract-data', $request);
     }
 
     /**
@@ -185,7 +185,7 @@ class PdfGateClient
      */
     public function getDocument(string $documentId, array $query = array()): PdfGateDocumentMetadata
     {
-        $response = $this->requestHandler->getJsonResponse(
+        $response = $this->requestHandler->getJson(
             '/document/' . rawurlencode($documentId),
             $query
         );
@@ -205,7 +205,7 @@ class PdfGateClient
             throw new InvalidConfigurationException('Document ID cannot be empty.');
         }
 
-        $body = $this->requestHandler->getBinaryResponse('/file/' . rawurlencode($documentId));
+        $body = $this->requestHandler->getBinary('/file/' . rawurlencode($documentId));
         $stream = fopen('php://temp', 'w+b');
 
         if ($stream === false) {

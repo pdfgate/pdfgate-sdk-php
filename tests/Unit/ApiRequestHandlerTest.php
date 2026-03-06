@@ -25,7 +25,7 @@ final class ApiRequestHandlerTest extends TestCase
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage('Failed to decode JSON response body.');
 
-        $handler->postJsonResponse('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
+        $handler->postJson('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
     }
 
     public function testPostJsonResponseThrowsWhenJsonIsNotAnObject(): void
@@ -39,7 +39,7 @@ final class ApiRequestHandlerTest extends TestCase
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage('Expected JSON object response body.');
 
-        $handler->postJsonResponse('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
+        $handler->postJson('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
     }
 
     public function testPostJsonResponseAcceptsEmptyJsonObject(): void
@@ -50,7 +50,7 @@ final class ApiRequestHandlerTest extends TestCase
             new StaticResponseTransport(new HttpResponse(200, '{}'))
         );
 
-        $result = $handler->postJsonResponse('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
+        $result = $handler->postJson('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
 
         self::assertSame(array(), $result);
     }
@@ -64,7 +64,7 @@ final class ApiRequestHandlerTest extends TestCase
         );
 
         try {
-            $handler->postJsonResponse('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
+            $handler->postJson('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
             self::fail('Expected ApiException was not thrown.');
         } catch (ApiException $e) {
             self::assertSame(400, $e->getStatusCode());
@@ -81,7 +81,7 @@ final class ApiRequestHandlerTest extends TestCase
             $transport
         );
 
-        $handler->postMultipartJsonResponse('/watermark/pdf', array(
+        $handler->postMultipart('/watermark/pdf', array(
             'documentId' => 'source_123',
             'type' => 'text',
             'text' => 'watermark',
@@ -108,7 +108,7 @@ final class ApiRequestHandlerTest extends TestCase
             new StaticResponseTransport(new HttpResponse(200, '{"id":"6642381c5c61","status":"completed"}'))
         );
 
-        $result = $handler->postMultipartJsonResponse('/watermark/pdf', array(
+        $result = $handler->postMultipart('/watermark/pdf', array(
             'documentId' => 'source_123',
             'type' => 'text',
             'text' => 'watermark',
@@ -128,7 +128,7 @@ final class ApiRequestHandlerTest extends TestCase
         );
         $file = new \CURLFile(__FILE__, 'application/pdf', 'upload.pdf');
 
-        $handler->postMultipartJsonResponse('/upload', array(
+        $handler->postMultipart('/upload', array(
             'file' => $file,
             'jsonResponse' => true,
         ));
@@ -151,7 +151,7 @@ final class ApiRequestHandlerTest extends TestCase
             $transport
         );
 
-        $handler->getJsonResponse('/document/doc_123', array('preSignedUrlExpiresIn' => 1200));
+        $handler->getJson('/document/doc_123', array('preSignedUrlExpiresIn' => 1200));
 
         $request = $transport->lastRequest;
         self::assertNotNull($request);
@@ -173,7 +173,7 @@ final class ApiRequestHandlerTest extends TestCase
             new StaticResponseTransport(new HttpResponse(200, '{"id":"6642381c5c61","status":"completed"}'))
         );
 
-        $result = $handler->getJsonResponse('/document/6642381c5c61');
+        $result = $handler->getJson('/document/6642381c5c61');
 
         self::assertSame('6642381c5c61', $result['id']);
         self::assertSame('completed', $result['status']);
@@ -188,7 +188,7 @@ final class ApiRequestHandlerTest extends TestCase
             $transport
         );
 
-        $result = $handler->getBinaryResponse('/file/doc_123');
+        $result = $handler->getBinary('/file/doc_123');
 
         self::assertSame('%PDF-1.7 binary', $result);
         $request = $transport->lastRequest;
@@ -209,7 +209,7 @@ final class ApiRequestHandlerTest extends TestCase
         );
 
         try {
-            $handler->getBinaryResponse('/file/missing_doc');
+            $handler->getBinary('/file/missing_doc');
             self::fail('Expected ApiException was not thrown.');
         } catch (ApiException $e) {
             self::assertSame(404, $e->getStatusCode());

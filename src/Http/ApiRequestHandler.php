@@ -44,7 +44,7 @@ class ApiRequestHandler
      * @param array<string,mixed> $payload Request body payload.
      * @return array<string,mixed>
      */
-    public function postJsonResponse(string $path, array $payload): array
+    public function postJson(string $path, array $payload): array
     {
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
@@ -69,7 +69,7 @@ class ApiRequestHandler
      * @param array<string,mixed> $payload multipart/form-data payload.
      * @return array<string,mixed>
      */
-    public function postMultipartJsonResponse(string $path, array $payload): array
+    public function postMultipart(string $path, array $payload): array
     {
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
@@ -94,7 +94,7 @@ class ApiRequestHandler
      * @param array<string,mixed> $query Query string parameters.
      * @return array<string,mixed>
      */
-    public function getJsonResponse(string $path, array $query = array()): array
+    public function getJson(string $path, array $query = array()): array
     {
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
@@ -117,7 +117,7 @@ class ApiRequestHandler
      * @param string $path Endpoint path.
      * @return string
      */
-    public function getBinaryResponse(string $path): string
+    public function getBinary(string $path): string
     {
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
