@@ -5,6 +5,15 @@ on:
     types:
       - published
   workflow_dispatch:
+    inputs:
+      sync_mode:
+        description: 'Use dry-run to inspect the Packagist request without sending it.'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run
+          - live
 
 permissions:
   contents: read
@@ -14,41 +23,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Validate required secrets
+      - name: Simulate Packagist sync (dry-run)
+        if: github.event_name == 'workflow_dispatch' && inputs.sync_mode == 'dry-run'
         env:
-          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
-          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${PACKAGIST_USERNAME}" ] || [ -z "${PACKAGIST_TOKEN}" ]; then
-            echo "PACKAGIST_USERNAME and PACKAGIST_TOKEN must be configured as repository secrets."
-            exit 1
-          fi
+          EVENT_NAME: ${{ github.event_name }}
+          SYNC_MODE: ${{ inputs.sync_mode }}
+        run: ./scripts/sync-packagist.sh
 
       - name: Notify Packagist
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.sync_mode == 'live')
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          SYNC_MODE: ${{ github.event_name == 'release' && 'live' || inputs.sync_mode }}
           PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
           PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          payload='{"repository":"https://github.com/pdfgate/pdfgate-sdk-php"}'
-
-          response_file=$(mktemp)
-          status_code=$(curl --silent --show-error \
-            --output "$response_file" \
-            --write-out "%{http_code}" \
-            --request POST \
-            --header "Content-Type: application/json" \
-            --header "Authorization: Bearer ${PACKAGIST_USERNAME}:${PACKAGIST_TOKEN}" \
-            --data "$payload" \
-            https://packagist.org/api/update-package)
-
-          if [ "$status_code" -lt 200 ] || [ "$status_code" -ge 300 ]; then
-            echo "Packagist sync failed with status $status_code"
-            cat "$response_file"
-            exit 1
-          fi
-
-          echo "Packagist sync successful"
-          cat "$response_file"
+        run: ./scripts/sync-packagist.sh

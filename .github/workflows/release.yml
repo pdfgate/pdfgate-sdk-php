@@ -4,6 +4,19 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      test_tag:
+        description: 'Manual test tag. Must use the test-* namespace, for example test-2026-03-16-1.'
+        required: true
+        type: string
+      release_mode:
+        description: 'Manual test release mode. Only prerelease is allowed.'
+        required: true
+        default: 'prerelease'
+        type: choice
+        options:
+          - prerelease
 
 permissions:
   contents: write
@@ -36,37 +49,32 @@ jobs:
       - name: Run unit tests
         run: composer run test:unit
 
-      - name: Validate tag and changelog entry
+      - name: Prepare release metadata and notes
+        id: prepare_release
         env:
-          TAG_NAME: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
+          EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          RELEASE_TEST_TAG: ${{ inputs.test_tag }}
+          RELEASE_MODE: ${{ inputs.release_mode }}
+        run: ./scripts/prepare-release.sh
 
-          if ! [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Tag '$TAG_NAME' must match vMAJOR.MINOR.PATCH"
-            exit 1
-          fi
-
-          VERSION="${TAG_NAME#v}"
-          if ! grep -Eq "^## \[$VERSION\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md; then
-            echo "CHANGELOG.md must include heading: ## [$VERSION] - YYYY-MM-DD"
-            exit 1
-          fi
-
-          awk -v version="$VERSION" '
-            $0 ~ "^## \\["version"\\]" {found=1; next}
-            found && /^## \[/ {exit}
-            found {print}
-          ' CHANGELOG.md > release-notes.md
-
-          if ! grep -q '[^[:space:]]' release-notes.md; then
-            echo "Changelog section for $VERSION has no release notes"
-            exit 1
-          fi
-
-      - name: Create GitHub Release
+      - name: Publish GitHub release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.prepare_release.outputs.release_tag }}
+          name: ${{ steps.prepare_release.outputs.release_name }}
+          target_commitish: ${{ github.sha }}
           body_path: release-notes.md
           generate_release_notes: true
+
+      - name: Create GitHub prerelease (manual test)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prepare_release.outputs.release_tag }}
+          name: ${{ steps.prepare_release.outputs.release_name }}
+          target_commitish: ${{ github.sha }}
+          body_path: release-notes.md
+          generate_release_notes: true
+          prerelease: true

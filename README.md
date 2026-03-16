@@ -144,3 +144,28 @@ composer run docs:build
 ```
 
 API docs are generated into `build/docs/api` and published to GitHub Pages by CI.
+
+### Test the release workflow safely
+
+Run the `Release` workflow manually with:
+
+- `test_tag`: a test-only tag in the `test-*` namespace, for example `test-2026-03-16-1`
+- `release_mode`: `prerelease`
+
+Manual test runs create a GitHub prerelease from the current commit and use the `## [Unreleased]` section from `CHANGELOG.md` for `release-notes.md`.
+
+Production releases still require pushing a real tag such as `v1.2.3`, and `CHANGELOG.md` must include a matching heading in the form `## [1.2.3] - YYYY-MM-DD`.
+
+### Test the Packagist sync workflow safely
+
+Run the `Packagist Sync` workflow manually with the default `sync_mode=dry-run`.
+
+Dry-run mode prints:
+
+- the target Packagist URL
+- the request method and headers
+- the JSON payload that would be sent
+
+Dry-run mode does not require `PACKAGIST_USERNAME` or `PACKAGIST_TOKEN`, and it does not send a network request to Packagist.
+
+Published production releases continue to trigger the real Packagist sync automatically. A manual `live` run is available for repository operators, but it is not needed for workflow testing and will contact Packagist.
