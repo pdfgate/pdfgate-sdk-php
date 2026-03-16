@@ -59,6 +59,7 @@ final class PackagistSyncScriptTest extends TestCase
     }
 
     /**
+     * @param array<string, string> $env
      * @return array{exitCode:int,stdout:string,stderr:string}
      */
     private function runScript(array $env): array

@@ -126,6 +126,7 @@ final class ReleaseWorkflowScriptTest extends TestCase
     }
 
     /**
+     * @param array<string, string> $env
      * @return array{exitCode:int,stderr:string,githubOutput:string,releaseNotes:string}
      */
     private function runScript(array $env): array

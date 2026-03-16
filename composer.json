@@ -51,7 +51,7 @@
       "@docs:api",
       "@docs:check-links"
     ],
-    "stan": "phpstan analyse",
+    "stan": "phpstan analyse --memory-limit=512M",
     "check": [
       "composer validate --strict",
       "@stan",
