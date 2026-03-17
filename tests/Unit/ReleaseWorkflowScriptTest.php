@@ -161,8 +161,8 @@ final class ReleaseWorkflowScriptTest extends TestCase
 
         return array(
             'exitCode' => $exitCode,
-            'stdout' => $stdout,
-            'stderr' => $stderr,
+            'stdout' => is_string($stdout) ? $stdout : '',
+            'stderr' => is_string($stderr) ? $stderr : '',
         );
     }
 }
