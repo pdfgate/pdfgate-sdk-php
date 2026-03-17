@@ -15,6 +15,14 @@ use Throwable;
 class ApiRequestHandler
 {
     private const ERROR_BODY_LIMIT = 1024;
+    private const DEFAULT_TIMEOUT = 60;
+    private const TIMEOUTS_BY_PATH = array(
+        '/v1/generate/pdf' => 900,
+        '/protect/pdf' => 180,
+        '/watermark/pdf' => 180,
+        '/compress/pdf' => 180,
+        '/forms/flatten' => 180,
+    );
 
     /** @var string */
     private $baseUrl;
@@ -53,7 +61,8 @@ class ApiRequestHandler
         $request = HttpRequest::makePostJson(
             $url,
             $this->authHeaders(),
-            $payload
+            $payload,
+            $this->resolveTimeoutForPath($path)
         );
 
         $response = $this->send($request);
@@ -77,7 +86,8 @@ class ApiRequestHandler
         $request = HttpRequest::makePostMultipart(
             $url,
             $this->authHeaders(),
-            $payload
+            $payload,
+            $this->resolveTimeoutForPath($path)
         );
 
         $response = $this->send($request);
@@ -101,7 +111,8 @@ class ApiRequestHandler
             ->build();
         $request = HttpRequest::makeGet(
             $url,
-            $this->authHeaders()
+            $this->authHeaders(),
+            $this->resolveTimeoutForPath($path)
         );
 
         $response = $this->send($request);
@@ -123,7 +134,8 @@ class ApiRequestHandler
             ->build();
         $request = HttpRequest::makeGet(
             $url,
-            $this->authHeaders()
+            $this->authHeaders(),
+            $this->resolveTimeoutForPath($path)
         );
 
         $response = $this->send($request);
@@ -139,6 +151,11 @@ class ApiRequestHandler
         return array(
             'Authorization' => 'Bearer ' . $this->apiKey,
         );
+    }
+
+    private function resolveTimeoutForPath(string $path): int
+    {
+        return self::TIMEOUTS_BY_PATH[$path] ?? self::DEFAULT_TIMEOUT;
     }
 
     /**

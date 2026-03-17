@@ -32,6 +32,7 @@ final class CurlHttpTransportTest extends TestCase
         self::assertSame('{"ok":true}', $response->body);
         self::assertArrayHasKey(CURLOPT_RETURNTRANSFER, $curl->setOptArrayOptions);
         self::assertSame(true, $curl->setOptArrayOptions[CURLOPT_RETURNTRANSFER]);
+        self::assertSame(60, $curl->setOptArrayOptions[CURLOPT_TIMEOUT]);
     }
 
     public function testSendAddsJsonContentTypeAndEncodedPayload(): void
@@ -52,6 +53,26 @@ final class CurlHttpTransportTest extends TestCase
 
         self::assertSame('{"html":"<p>Hello<\/p>"}', $curl->postFields);
         self::assertContains('Content-Type: application/json', $curl->setOptArrayOptions[CURLOPT_HTTPHEADER]);
+    }
+
+    public function testSendAppliesRequestTimeoutOption(): void
+    {
+        $curl = new FakeCurlClient();
+        $curl->execResult = '{}';
+        $curl->infoResult = 200;
+
+        $transport = new CurlHttpTransport($curl);
+
+        $transport->send(
+            HttpRequest::makePostJson(
+                'https://api.pdfgate.com/v1/generate/pdf',
+                array('Authorization' => 'Bearer x'),
+                array('html' => '<p>Hello</p>'),
+                900
+            )
+        );
+
+        self::assertSame(900, $curl->setOptArrayOptions[CURLOPT_TIMEOUT]);
     }
 
     public function testSendSupportsMultipartPayloadWithoutJsonContentType(): void

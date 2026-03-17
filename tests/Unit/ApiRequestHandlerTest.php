@@ -98,6 +98,7 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame('text', $request->getMultipartBody()['type']);
         self::assertSame('watermark', $request->getMultipartBody()['text']);
         self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
+        self::assertSame(180, $request->getTimeout());
     }
 
     public function testPostMultipartJsonResponseDecodesJsonObjectResponse(): void
@@ -140,6 +141,7 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertNull($request->getJsonBody());
         self::assertSame($file, $request->getMultipartBody()['file']);
         self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
+        self::assertSame(60, $request->getTimeout());
     }
 
     public function testGetJsonResponseSendsGetRequestWithQueryAndAuthHeader(): void
@@ -163,6 +165,7 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
         self::assertSame(null, $request->getJsonBody());
         self::assertSame(null, $request->getMultipartBody());
+        self::assertSame(60, $request->getTimeout());
     }
 
     public function testGetJsonResponseDecodesJsonObjectResponse(): void
@@ -198,6 +201,7 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
         self::assertNull($request->getJsonBody());
         self::assertNull($request->getMultipartBody());
+        self::assertSame(60, $request->getTimeout());
     }
 
     public function testGetBinaryResponseThrowsApiExceptionOnNonSuccessStatusCode(): void
@@ -215,6 +219,76 @@ final class ApiRequestHandlerTest extends TestCase
             self::assertSame(404, $e->getStatusCode());
             self::assertStringContainsString('not found', $e->getMessage());
         }
+    }
+
+    public function testPostJsonGenerateRequestUsesExtendedTimeout(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_123"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $handler->postJson('/v1/generate/pdf', array('html' => '<p>Hello</p>'));
+
+        self::assertSame(900, $transport->lastRequest->getTimeout());
+    }
+
+    public function testPostJsonProtectRequestUsesMediumTimeout(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_123"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $handler->postJson('/protect/pdf', array('documentId' => 'doc_123'));
+
+        self::assertSame(180, $transport->lastRequest->getTimeout());
+    }
+
+    public function testPostJsonCompressRequestUsesMediumTimeout(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_123"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $handler->postJson('/compress/pdf', array('documentId' => 'doc_123'));
+
+        self::assertSame(180, $transport->lastRequest->getTimeout());
+    }
+
+    public function testPostJsonFlattenRequestUsesMediumTimeout(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_123"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $handler->postJson('/forms/flatten', array('documentId' => 'doc_123'));
+
+        self::assertSame(180, $transport->lastRequest->getTimeout());
+    }
+
+    public function testPostJsonUsesDefaultTimeoutForOtherEndpoints(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"doc_123"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $handler->postJson('/forms/extract-data', array('documentId' => 'doc_123'));
+
+        self::assertSame(60, $transport->lastRequest->getTimeout());
     }
 }
 

@@ -64,6 +64,7 @@ class CurlHttpTransport implements HttpTransportInterface
                     CURLOPT_URL => $request->getUrl(),
                     CURLOPT_CUSTOMREQUEST => $request->getMethod(),
                     CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => $request->getTimeout(),
                     CURLOPT_HTTPHEADER => $headerList,
                 )) === false
             ) {
