@@ -145,27 +145,22 @@ composer run docs:build
 
 API docs are generated into `build/docs/api` and published to GitHub Pages by CI.
 
-### Test the release workflow safely
+### Generate the changelog manually
 
-Run the `Release` workflow manually with:
+If you want to update `CHANGELOG.md` before or after making a release, run the generator
+manually. It reads commit subjects since the previous semver tag and updates `CHANGELOG.md`
+for the release version you provide.
 
-- `test_tag`: a test-only tag in the `test-*` namespace, for example `test-2026-03-16-1`
-- `release_mode`: `prerelease`
+Generate changelog content for a release version:
 
-Manual test runs create a GitHub prerelease from the current commit and use the `## [Unreleased]` section from `CHANGELOG.md` for `release-notes.md`.
+```bash
+RELEASE_VERSION=1.2.3 php scripts/prepare-release.php
+```
 
-Production releases still require pushing a real tag such as `v1.2.3`, and `CHANGELOG.md` must include a matching heading in the form `## [1.2.3] - YYYY-MM-DD`.
+Preview the update without writing `CHANGELOG.md`:
 
-### Test the Packagist sync workflow safely
+```bash
+DRY_RUN=1 RELEASE_VERSION=1.2.3 php scripts/prepare-release.php
+```
 
-Run the `Packagist Sync` workflow manually with the default `sync_mode=dry-run`.
-
-Dry-run mode prints:
-
-- the target Packagist URL
-- the request method and headers
-- the JSON payload that would be sent
-
-Dry-run mode does not require `PACKAGIST_USERNAME` or `PACKAGIST_TOKEN`, and it does not send a network request to Packagist.
-
-Published production releases continue to trigger the real Packagist sync automatically. A manual `live` run is available for repository operators, but it is not needed for workflow testing and will contact Packagist.
+If there are no updates since the previous release, the script generates a fallback `Changed` note instead of failing.

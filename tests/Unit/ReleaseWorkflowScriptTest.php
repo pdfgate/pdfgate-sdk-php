@@ -4,145 +4,155 @@ declare(strict_types=1);
 
 namespace PdfGate\Tests\Unit;
 
+use PdfGate\Internal\Release\ChangelogBuilder;
 use PHPUnit\Framework\TestCase;
 
 final class ReleaseWorkflowScriptTest extends TestCase
 {
-    public function testProductionReleasePreparationAcceptsSemverTagAndExtractsReleaseNotes(): void
+    public function testBuildReleaseNotesGroupsCommitSubjectsIntoSections(): void
     {
-        $changelogPath = $this->createChangelog(
-            <<<MD
-            ## [Unreleased]
+        $builder = new ChangelogBuilder();
 
-            - Upcoming change.
-
-            ## [1.2.3] - 2026-03-16
-
-            - Stable release note.
-            MD
+        $result = $builder->buildReleaseNotes(
+            array(
+                'feat(api): add upload endpoint',
+                'docs(readme): describe upload endpoint',
+                'fix(client): handle timeout response',
+                'refactor(http): simplify request builder',
+                'test(client): add upload coverage',
+                'chore(ci): tighten workflow checks',
+                'misc subject without prefix',
+            ),
+            'v0.1.0'
         );
 
-        $releaseNotesPath = tempnam(sys_get_temp_dir(), 'release-notes-');
-        $githubOutputPath = tempnam(sys_get_temp_dir(), 'github-output-');
-
-        $result = $this->runScript(array(
-            'EVENT_NAME' => 'push',
-            'GITHUB_REF_NAME' => 'v1.2.3',
-            'CHANGELOG_PATH' => $changelogPath,
-            'RELEASE_NOTES_PATH' => $releaseNotesPath,
-            'GITHUB_OUTPUT' => $githubOutputPath,
-        ));
-
-        self::assertSame(0, $result['exitCode'], $result['stderr']);
-        self::assertStringContainsString('release_tag=v1.2.3', $result['githubOutput']);
-        self::assertStringContainsString('release_name=v1.2.3', $result['githubOutput']);
-        self::assertStringContainsString('prerelease=false', $result['githubOutput']);
-        self::assertStringContainsString('Stable release note.', $result['releaseNotes']);
-        self::assertStringNotContainsString('Upcoming change.', $result['releaseNotes']);
+        self::assertStringContainsString("### Added\n\n- add upload endpoint", $result['notes']);
+        self::assertStringContainsString("### Fixed\n\n- handle timeout response", $result['notes']);
+        self::assertStringContainsString("### Changed\n\n- simplify request builder\n- misc subject without prefix", $result['notes']);
+        self::assertStringContainsString("### Documentation\n\n- describe upload endpoint", $result['notes']);
+        self::assertStringContainsString("### Tests\n\n- add upload coverage", $result['notes']);
+        self::assertStringContainsString("### Maintenance\n\n- tighten workflow checks", $result['notes']);
     }
 
-    public function testProductionReleasePreparationFailsWhenChangelogEntryIsMissing(): void
+    public function testBuildReleaseNotesAddsFallbackMessageWhenThereAreNoSubjects(): void
     {
-        $changelogPath = $this->createChangelog(
+        $builder = new ChangelogBuilder();
+
+        $result = $builder->buildReleaseNotes(array(), 'v0.1.0');
+
+        self::assertSame("### Changed\n\n- No changes since v0.1.0.", $result['notes']);
+    }
+
+    public function testUpdateChangelogInsertsNewVersionBelowUnreleased(): void
+    {
+        $builder = new ChangelogBuilder();
+        $updated = $builder->updateChangelog(
             <<<MD
+            # Changelog
+
+            All notable changes to this project are documented in this file.
+
             ## [Unreleased]
 
-            - Upcoming change.
+            ## [0.1.0] - 2026-03-05
+
+            ### Added
+
+            - Initial public SDK release.
+            MD,
+            '1.2.3',
+            '2026-03-16',
+            "### Added\n\n- add upload endpoint"
+        );
+
+        self::assertStringContainsString("## [Unreleased]\n\n## [1.2.3] - 2026-03-16", $updated);
+        self::assertStringContainsString("### Added\n\n- add upload endpoint", $updated);
+        self::assertStringContainsString('## [0.1.0] - 2026-03-05', $updated);
+    }
+
+    public function testPrepareReleaseCliRequiresReleaseVersion(): void
+    {
+        $workspace = sys_get_temp_dir() . '/pdfgate-release-cli-' . bin2hex(random_bytes(8));
+        mkdir($workspace, 0777, true);
+
+        $changelogPath = $workspace . '/CHANGELOG.md';
+
+        file_put_contents(
+            $changelogPath,
+            <<<MD
+            # Changelog
+
+            All notable changes to this project are documented in this file.
+
+            ## [Unreleased]
+
+            ## [0.1.0] - 2026-03-05
+
+            ### Added
+
+            - Initial public SDK release.
             MD
         );
 
-        $releaseNotesPath = tempnam(sys_get_temp_dir(), 'release-notes-');
-        $githubOutputPath = tempnam(sys_get_temp_dir(), 'github-output-');
-
-        $result = $this->runScript(array(
-            'EVENT_NAME' => 'push',
-            'GITHUB_REF_NAME' => 'v1.2.3',
+        $result = $this->runCli($workspace, array(
             'CHANGELOG_PATH' => $changelogPath,
-            'RELEASE_NOTES_PATH' => $releaseNotesPath,
-            'GITHUB_OUTPUT' => $githubOutputPath,
         ));
 
         self::assertNotSame(0, $result['exitCode']);
-        self::assertStringContainsString('CHANGELOG.md must include heading: ## [1.2.3] - YYYY-MM-DD', $result['stderr']);
+        self::assertStringContainsString(
+            'RELEASE_VERSION must be set to MAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH',
+            $result['stderr']
+        );
     }
 
-    public function testManualReleasePreparationUsesUnreleasedNotesAndMarksPrerelease(): void
+    public function testPrepareReleaseCliRejectsInvalidReleaseVersion(): void
     {
-        $changelogPath = $this->createChangelog(
+        $workspace = sys_get_temp_dir() . '/pdfgate-release-cli-' . bin2hex(random_bytes(8));
+        mkdir($workspace, 0777, true);
+
+        $changelogPath = $workspace . '/CHANGELOG.md';
+
+        file_put_contents(
+            $changelogPath,
             <<<MD
+            # Changelog
+
+            All notable changes to this project are documented in this file.
+
             ## [Unreleased]
-
-            - Test release note.
-
-            ## [1.2.3] - 2026-03-16
-
-            - Stable release note.
             MD
         );
 
-        $releaseNotesPath = tempnam(sys_get_temp_dir(), 'release-notes-');
-        $githubOutputPath = tempnam(sys_get_temp_dir(), 'github-output-');
-
-        $result = $this->runScript(array(
-            'EVENT_NAME' => 'workflow_dispatch',
-            'RELEASE_TEST_TAG' => 'test-2026-03-16-1',
-            'RELEASE_MODE' => 'prerelease',
+        $result = $this->runCli($workspace, array(
+            'RELEASE_VERSION' => 'test-2026-03-16-1',
             'CHANGELOG_PATH' => $changelogPath,
-            'RELEASE_NOTES_PATH' => $releaseNotesPath,
-            'GITHUB_OUTPUT' => $githubOutputPath,
-        ));
-
-        self::assertSame(0, $result['exitCode'], $result['stderr']);
-        self::assertStringContainsString('release_tag=test-2026-03-16-1', $result['githubOutput']);
-        self::assertStringContainsString('prerelease=true', $result['githubOutput']);
-        self::assertStringContainsString('Test release note.', $result['releaseNotes']);
-        self::assertStringNotContainsString('Stable release note.', $result['releaseNotes']);
-    }
-
-    public function testManualReleasePreparationRejectsNonTestNamespaceTags(): void
-    {
-        $changelogPath = $this->createChangelog(
-            <<<MD
-            ## [Unreleased]
-
-            - Test release note.
-            MD
-        );
-
-        $releaseNotesPath = tempnam(sys_get_temp_dir(), 'release-notes-');
-        $githubOutputPath = tempnam(sys_get_temp_dir(), 'github-output-');
-
-        $result = $this->runScript(array(
-            'EVENT_NAME' => 'workflow_dispatch',
-            'RELEASE_TEST_TAG' => 'v1.2.3-rc.1',
-            'RELEASE_MODE' => 'prerelease',
-            'CHANGELOG_PATH' => $changelogPath,
-            'RELEASE_NOTES_PATH' => $releaseNotesPath,
-            'GITHUB_OUTPUT' => $githubOutputPath,
         ));
 
         self::assertNotSame(0, $result['exitCode']);
-        self::assertStringContainsString("Manual test tag 'v1.2.3-rc.1' must match test-<identifier>", $result['stderr']);
+        self::assertStringContainsString(
+            "Release version 'test-2026-03-16-1' must match MAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH",
+            $result['stderr']
+        );
     }
 
     /**
      * @param array<string, string> $env
-     * @return array{exitCode:int,stderr:string,githubOutput:string,releaseNotes:string}
+     * @return array{exitCode:int,stderr:string,stdout:string}
      */
-    private function runScript(array $env): array
+    private function runCli(string $workingDirectory, array $env): array
     {
-        $command = array('bash', __DIR__ . '/../../scripts/prepare-release.sh');
+        $command = array('php', __DIR__ . '/../../scripts/prepare-release.php');
         $descriptors = array(
             0 => array('pipe', 'r'),
             1 => array('pipe', 'w'),
             2 => array('pipe', 'w'),
         );
 
-        $process = proc_open($command, $descriptors, $pipes, dirname(__DIR__, 2), array_merge($_ENV, $env));
+        $process = proc_open($command, $descriptors, $pipes, $workingDirectory, array_merge($_ENV, $env));
         self::assertIsResource($process);
 
         fclose($pipes[0]);
-        stream_get_contents($pipes[1]);
+        $stdout = stream_get_contents($pipes[1]);
         fclose($pipes[1]);
         $stderr = stream_get_contents($pipes[2]);
         fclose($pipes[2]);
@@ -151,18 +161,8 @@ final class ReleaseWorkflowScriptTest extends TestCase
 
         return array(
             'exitCode' => $exitCode,
+            'stdout' => $stdout,
             'stderr' => $stderr,
-            'githubOutput' => file_exists($env['GITHUB_OUTPUT']) ? (string) file_get_contents($env['GITHUB_OUTPUT']) : '',
-            'releaseNotes' => file_exists($env['RELEASE_NOTES_PATH']) ? (string) file_get_contents($env['RELEASE_NOTES_PATH']) : '',
         );
-    }
-
-    private function createChangelog(string $contents): string
-    {
-        $path = tempnam(sys_get_temp_dir(), 'changelog-');
-        self::assertNotFalse($path);
-        file_put_contents($path, $contents);
-
-        return $path;
     }
 }
