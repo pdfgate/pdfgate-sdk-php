@@ -46,7 +46,12 @@ final class SiteBuilder
         $this->clearOutputDirectory($outputDirectory, array('api'));
 
         $documents = $this->discoverDocuments($docsDirectory);
-        $navigation = $this->buildNavigation($documents, $docsDirectory, $outputDirectory);
+        $indexContents = file_get_contents($indexPath);
+        if ($indexContents === false) {
+            throw new RuntimeException(sprintf('Failed to read docs source file: %s', $indexPath));
+        }
+
+        $navigation = $this->buildNavigation($indexContents, $indexPath, $docsDirectory, $outputDirectory);
 
         foreach ($documents as $sourcePath) {
             $outputPath = $this->outputPathForDocument($sourcePath, $docsDirectory, $outputDirectory);
@@ -54,8 +59,8 @@ final class SiteBuilder
 
             $this->ensureDirectory($outputDirectoryPath);
 
-            $contents = file_get_contents($sourcePath);
-            if ($contents === false) {
+            $contents = $sourcePath === $indexPath ? $indexContents : file_get_contents($sourcePath);
+            if (!is_string($contents)) {
                 throw new RuntimeException(sprintf('Failed to read docs source file: %s', $sourcePath));
             }
 
@@ -91,22 +96,31 @@ final class SiteBuilder
     }
 
     /**
-     * @param list<string> $documents
      * @return list<array{label:string,outputPath:string}>
      */
-    private function buildNavigation(array $documents, string $docsDirectory, string $outputDirectory): array
+    private function buildNavigation(
+        string $indexContents,
+        string $indexPath,
+        string $docsDirectory,
+        string $outputDirectory
+    ): array
     {
         $navigation = array();
 
-        foreach ($documents as $sourcePath) {
-            $contents = file_get_contents($sourcePath);
-            if ($contents === false) {
-                throw new RuntimeException(sprintf('Failed to read docs source file: %s', $sourcePath));
-            }
+        if (!preg_match_all('/\[(?<label>[^\]]+)\]\((?<destination>[^)]+)\)/', $indexContents, $matches, PREG_SET_ORDER)) {
+            throw new RuntimeException(sprintf('Docs index must include at least one navigation link: %s', $indexPath));
+        }
 
+        foreach ($matches as $match) {
+            $destination = trim($match['destination']);
             $navigation[] = array(
-                'label' => $this->extractTitle($contents, $sourcePath),
-                'outputPath' => $this->outputPathForDocument($sourcePath, $docsDirectory, $outputDirectory),
+                'label' => trim($match['label']),
+                'outputPath' => $this->outputPathForNavigationDestination(
+                    $destination,
+                    $indexPath,
+                    $docsDirectory,
+                    $outputDirectory
+                ),
             );
         }
 
@@ -134,11 +148,11 @@ final class SiteBuilder
             $navigationMarkup[] = sprintf('<li%s><a href="%s">%s</a></li>', $className, $href, $label);
         }
 
-        $apiHref = htmlspecialchars($this->relativeHref(dirname($outputPath), $outputDirectory . '/api/index.html'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $pageTitle = htmlspecialchars(sprintf('%s | PDFGate SDK for PHP', $documentTitle), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $content = $this->markdown->text($markdown);
 
         $navigationItems = implode("\n          ", $navigationMarkup);
+        $homeHref = htmlspecialchars($this->relativeHref(dirname($outputPath), $outputDirectory . '/index.html'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         return <<<HTML
 <!DOCTYPE html>
@@ -182,6 +196,11 @@ final class SiteBuilder
       align-self: start;
       position: sticky;
       top: 20px;
+    }
+
+    .sidebar-title {
+      margin: 0 0 16px;
+      font-size: 1.25rem;
     }
 
     .content {
@@ -283,10 +302,9 @@ final class SiteBuilder
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <h2>PDFGate SDK for PHP</h2>
+      <h2 class="sidebar-title"><a href="{$homeHref}">PDFGate SDK for PHP</a></h2>
       <nav aria-label="Documentation">
         <ul>
-          <li><a href="{$apiHref}">API Reference</a></li>
           {$navigationItems}
         </ul>
       </nav>
@@ -356,6 +374,25 @@ HTML;
         }
 
         return sprintf('%s/guides/%s/index.html', $outputDirectory, $matches[1]);
+    }
+
+    private function outputPathForNavigationDestination(
+        string $destination,
+        string $indexPath,
+        string $docsDirectory,
+        string $outputDirectory
+    ): string {
+        if ($destination === '/api/') {
+            return $outputDirectory . '/api/index.html';
+        }
+
+        if (substr($destination, -3) !== '.md') {
+            throw new RuntimeException(sprintf('Unsupported navigation link in docs index: %s', $destination));
+        }
+
+        $resolvedSourcePath = $this->normalizePath(dirname($indexPath) . '/' . $destination);
+
+        return $this->outputPathForDocument($resolvedSourcePath, $docsDirectory, $outputDirectory);
     }
 
     private function extractTitle(string $markdown, string $sourcePath): string

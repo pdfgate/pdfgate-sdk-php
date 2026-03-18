@@ -20,7 +20,8 @@ final class DocsSiteBuilderTest extends TestCase
             # SDK Docs
 
             - [Quickstart](guides/quickstart.md)
-            - [API Guide](guides/api.md)
+            - [Usage Guide](guides/api.md)
+            - [API Reference](/api/)
             MD
         );
         $this->writeFile(
@@ -58,7 +59,11 @@ final class DocsSiteBuilderTest extends TestCase
         self::assertStringContainsString('href="guides/quickstart/"', $indexHtml);
         self::assertStringContainsString('href="guides/api/"', $indexHtml);
         self::assertStringContainsString('href="api/"', $indexHtml);
-        self::assertStringContainsString('href="../api/"', $quickstartHtml);
+        self::assertNavigationOrder(
+            $quickstartHtml,
+            array('Quickstart', 'Usage Guide', 'API Reference')
+        );
+        self::assertStringContainsString('class="sidebar-title"><a href="../../">PDFGate SDK for PHP</a>', $quickstartHtml);
         self::assertStringContainsString('href="../../api/"', $quickstartHtml);
         self::assertStringContainsString('href="../../"', $apiGuideHtml);
     }
@@ -157,6 +162,20 @@ SH
         }
 
         file_put_contents($path, $contents);
+    }
+
+    /**
+     * @param list<string> $labels
+     */
+    private function assertNavigationOrder(string $html, array $labels): void
+    {
+        $offset = 0;
+
+        foreach ($labels as $label) {
+            $position = strpos($html, '>' . $label . '</a>', $offset);
+            self::assertNotFalse($position, sprintf('Missing navigation label %s.', $label));
+            $offset = $position + strlen($label);
+        }
     }
 
     /**
