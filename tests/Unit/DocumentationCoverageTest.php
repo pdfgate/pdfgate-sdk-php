@@ -30,5 +30,11 @@ final class DocumentationCoverageTest extends TestCase
                 sprintf('Missing docs index link for %s.', $link)
             );
         }
+
+        self::assertStringContainsString(
+            'https://pdfgate.github.io/pdfgate-sdk-php/api/',
+            $index,
+            'Docs index should point to the published API reference path.'
+        );
     }
 }

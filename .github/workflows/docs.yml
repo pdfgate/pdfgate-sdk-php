@@ -49,11 +49,8 @@ jobs:
           curl -fsSL https://phpdoc.org/phpDocumentor.phar -o build/tools/phpDocumentor.phar
           php build/tools/phpDocumentor.phar --version
 
-      - name: Build API docs
-        run: PHPDOC_BIN="php build/tools/phpDocumentor.phar" composer run docs:api
-
-      - name: Validate markdown links
-        run: composer run docs:check-links
+      - name: Build combined docs site
+        run: PHPDOC_BIN="php build/tools/phpDocumentor.phar" composer run docs:build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -61,7 +58,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: build/docs/api
+          path: build/docs/site
 
   deploy:
     if: github.event_name != 'pull_request'

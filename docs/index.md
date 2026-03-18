@@ -1,13 +1,18 @@
-# PDFGate SDK for PHP Documentation
+# PDFGate's PHP SDK
 
-This directory contains the curated SDK guides. API reference is generated from PHPDoc and published to GitHub Pages.
+Official PHP SDK for the PDFGate HTTP API.
 
-- API Reference (GitHub Pages): <https://pdfgate.github.io/pdfgate-sdk-php/>
-- Generated locally: `build/docs/api/index.html`
+PDFGate lets you generate, process, and secure PDFs via a simple API:
+
+- HTML or URL to PDF
+- Fillable forms
+- Flatten, compress, watermark, protect PDFs
+- Extract PDF form data
 
 ## Guides
 
 - [Quickstart](guides/quickstart.md)
-- [API](guides/api.md)
+- [Usage Guide](guides/api.md)
 - [Error Handling](guides/error-handling.md)
 - [Testing and Tooling](guides/testing.md)
+- [API Reference](/api/)

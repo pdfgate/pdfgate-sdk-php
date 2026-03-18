@@ -13,6 +13,7 @@ PDFGate lets you generate, process, and secure PDFs via a simple API:
 - Extract PDF form data
 
 🚀 SDK Documentation: https://pdfgate.github.io/pdfgate-sdk-php<br>
+🧭 API Reference: https://pdfgate.github.io/pdfgate-sdk-php/api/<br>
 📘 API Documentation: https://pdfgate.com/documentation<br>
 🔑 Dashboard & API keys: https://dashboard.pdfgate.com
 
@@ -131,6 +132,12 @@ Generate API docs (requires phpDocumentor in PATH, or `PHPDOC_BIN`):
 composer run docs:api
 ```
 
+Render the curated guides into the published site layout:
+
+```bash
+composer run docs:site
+```
+
 Validate markdown links:
 
 ```bash
@@ -143,7 +150,7 @@ Run both:
 composer run docs:build
 ```
 
-API docs are generated into `build/docs/api` and published to GitHub Pages by CI.
+The combined docs site is generated into `build/docs/site`, with curated guides at the site root and API reference under `build/docs/site/api`. GitHub Pages publishes that combined artifact.
 
 ### Generate the changelog manually
 

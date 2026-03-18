@@ -7,7 +7,7 @@
 >
   <title>PDFGate's PHP SDK</title>
   <paths>
-    <output>build/docs/api</output>
+    <output>build/docs/site/api</output>
     <cache>build/docs/.phpdoc/cache</cache>
   </paths>
   <version number="latest">

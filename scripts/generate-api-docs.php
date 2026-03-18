@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-$root = dirname(__DIR__);
+$root = projectRoot();
 
 chdir($root);
 
@@ -14,7 +14,8 @@ if ($phpDocBin === null) {
 }
 
 ensureDirectory($root . '/build/docs');
-ensureDirectory($root . '/build/docs/api');
+ensureDirectory($root . '/build/docs/site');
+ensureDirectory($root . '/build/docs/site/api');
 ensureDirectory($root . '/build/docs/.phpdoc/cache');
 
 $configPath = $root . '/phpdoc.xml';
@@ -31,7 +32,17 @@ if ($exitCode !== 0) {
     exit($exitCode);
 }
 
-fwrite(STDOUT, "API docs generated in build/docs/api\n");
+fwrite(STDOUT, "API docs generated in build/docs/site/api\n");
+
+function projectRoot(): string
+{
+    $configuredRoot = getenv('PDFGATE_PROJECT_ROOT');
+    if (is_string($configuredRoot) && trim($configuredRoot) !== '') {
+        return trim($configuredRoot);
+    }
+
+    return dirname(__DIR__);
+}
 
 function detectPhpDocBinary(string $root): ?string
 {
