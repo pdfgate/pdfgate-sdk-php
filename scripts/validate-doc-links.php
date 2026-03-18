@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-$root = dirname(__DIR__);
+$root = projectRoot();
 chdir($root);
 
 $files = array();
@@ -52,8 +52,7 @@ foreach ($files as $filePath) {
             continue;
         }
 
-        $resolvedPath = resolvePath(dirname($filePath), $destinationPath);
-        if ($resolvedPath === null || !is_file($resolvedPath)) {
+        if (!isValidLinkDestination($root, $filePath, $destinationPath)) {
             $errors[] = relativePath($root, $filePath) . ': broken link -> ' . $destination;
         }
     }
@@ -70,9 +69,58 @@ if ($errors !== array()) {
 
 fwrite(STDOUT, 'Markdown links validated for README.md and docs/.'."\n");
 
+function projectRoot(): string
+{
+    $configuredRoot = getenv('PDFGATE_PROJECT_ROOT');
+    if (is_string($configuredRoot) && trim($configuredRoot) !== '') {
+        return trim($configuredRoot);
+    }
+
+    return dirname(__DIR__);
+}
+
 function isExternalLink(string $link): bool
 {
     return preg_match('/^(https?:|mailto:|tel:)/i', $link) === 1;
+}
+
+function isValidLinkDestination(string $root, string $filePath, string $destinationPath): bool
+{
+    $resolvedPath = resolvePath(dirname($filePath), $destinationPath);
+    if ($resolvedPath !== null && is_file($resolvedPath)) {
+        return true;
+    }
+
+    foreach (publishedCandidates($root, $destinationPath) as $candidate) {
+        if (is_file($candidate)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * @return list<string>
+ */
+function publishedCandidates(string $root, string $destinationPath): array
+{
+    if ($destinationPath === '' || strpos($destinationPath, DIRECTORY_SEPARATOR) !== 0) {
+        return array();
+    }
+
+    $siteRoot = $root . '/build/docs/site';
+    $trimmedPath = trim($destinationPath, DIRECTORY_SEPARATOR);
+
+    if ($trimmedPath === '') {
+        return array($siteRoot . '/index.html');
+    }
+
+    return array(
+        $siteRoot . '/' . $trimmedPath,
+        $siteRoot . '/' . $trimmedPath . '/index.html',
+        $siteRoot . '/' . $trimmedPath . '.html',
+    );
 }
 
 function resolvePath(string $baseDir, string $path): ?string

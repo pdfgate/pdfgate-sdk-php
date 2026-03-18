@@ -32,7 +32,7 @@ final class DocumentationCoverageTest extends TestCase
         }
 
         self::assertStringContainsString(
-            'https://pdfgate.github.io/pdfgate-sdk-php/api/',
+            '(/api/)',
             $index,
             'Docs index should point to the published API reference path.'
         );
