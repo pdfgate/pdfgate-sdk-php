@@ -342,7 +342,7 @@ HTML;
                     $destination = substr($destination, 0, $fragmentPosition);
                 }
 
-                if ($destination === '' || substr($destination, -3) !== '.md') {
+                if (substr($destination, -3) !== '.md') {
                     return $matches[0];
                 }
 
@@ -357,7 +357,7 @@ HTML;
                 return sprintf('[%s](%s)', $matches['text'], $href);
             },
             $markdown
-        ) ?? $markdown;
+        );
     }
 
     private function outputPathForDocument(string $sourcePath, string $docsDirectory, string $outputDirectory): string
