@@ -97,6 +97,18 @@ if ($envelope->getStatus() === EnvelopeStatus::CREATED) {
 }
 ```
 
+### Send Envelope
+
+```php
+use PdfGate\Enum\EnvelopeStatus;
+
+$sentEnvelope = $client->sendEnvelope('69c0fa44f83ca6a7015f1c8c');
+
+if ($sentEnvelope->getStatus() === EnvelopeStatus::IN_PROGRESS) {
+    echo 'Envelope emails have been sent.';
+}
+```
+
 ### Download File
 
 ```php
@@ -107,7 +119,7 @@ fclose($output);
 fclose($stream);
 ```
 
-For complete operation examples (`flattenPdf`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `createEnvelope`), see [API](docs/guides/api.md).
+For complete operation examples (`flattenPdf`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `createEnvelope`, `sendEnvelope`), see [API](docs/guides/api.md).
 
 To download generated files, enable **Save files for one month** in PDFGate Dashboard settings.
 

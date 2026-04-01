@@ -257,6 +257,43 @@ HTML;
         );
     }
 
+    public function testSendEnvelopeReturnsInProgressEnvelope(): void
+    {
+        $envelope = self::$client->createEnvelope(array(
+            'requesterName' => 'Acceptance Suite',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => self::$envelopeSourceDocumentId,
+                    'name' => 'Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                        ),
+                    ),
+                ),
+            ),
+            'metadata' => array(
+                'suite' => 'acceptance-envelope-send',
+                'customerId' => 'cus_123',
+            ),
+        ));
+
+        $sentEnvelope = self::$client->sendEnvelope($envelope->getId());
+
+        self::assertSame($envelope->getId(), $sentEnvelope->getId());
+        self::assertSame('in_progress', $sentEnvelope->getStatus());
+        self::assertNotNull($sentEnvelope->getCreatedAt());
+        self::assertNotEmpty($sentEnvelope->getDocuments());
+        self::assertSame(
+            array(
+                'suite' => 'acceptance-envelope-send',
+                'customerId' => 'cus_123',
+            ),
+            $sentEnvelope->getMetadata()
+        );
+    }
+
     public function testGetFileReturnsPdfStream(): void
     {
         $stream = self::$client->getFile(self::$documentId);

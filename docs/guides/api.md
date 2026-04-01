@@ -52,6 +52,14 @@ $envelope = $client->createEnvelope([
 ]);
 ```
 
+## Send Envelope
+
+`sendEnvelope()` emails each recipient a secure signing link. Links expire after 30 days and recipients must complete OTP verification before entering the signing flow.
+
+```php
+$sentEnvelope = $client->sendEnvelope('69c0fa44f83ca6a7015f1c8c');
+```
+
 ## Flatten PDF
 
 ```php

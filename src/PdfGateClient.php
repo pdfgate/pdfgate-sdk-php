@@ -209,6 +209,26 @@ class PdfGateClient
     }
 
     /**
+     * Sends an existing envelope to all configured recipients.
+     *
+     * @param string $envelopeId Existing envelope ID.
+     * @return PdfGateEnvelope
+     */
+    public function sendEnvelope(string $envelopeId): PdfGateEnvelope
+    {
+        if (trim($envelopeId) === '') {
+            throw new InvalidConfigurationException('Envelope ID cannot be empty.');
+        }
+
+        $response = $this->requestHandler->postJson(
+            '/envelope/' . rawurlencode($envelopeId) . '/send',
+            array()
+        );
+
+        return $this->buildEnvelopeResponse($response);
+    }
+
+    /**
      * Retrieves a generated PDF file as a readable stream resource.
      *
      * @param string $documentId Generated document identifier.
