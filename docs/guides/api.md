@@ -13,7 +13,7 @@ $client->generatePdf([
 
 ## Upload File
 
-`uploadFile()` always sends `jsonResponse=true`. If both `file` and `url` are passed, the SDK prioritizes `file` and sends multipart form data.
+If both `file` and `url` are passed, `uploadFile()` prioritizes `file` and sends multipart form data.
 
 ```php
 $client->uploadFile([

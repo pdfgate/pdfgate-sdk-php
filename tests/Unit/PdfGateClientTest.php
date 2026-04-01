@@ -171,7 +171,7 @@ final class PdfGateClientTest extends TestCase
         self::assertSame(true, $request->getJsonBody()['jsonResponse']);
     }
 
-    public function testUploadFileWithUrlEnforcesJsonResponseAndUsesUploadPath(): void
+    public function testUploadFileWithUrlUsesUploadPath(): void
     {
         $transport = new RecordingTransport(new HttpResponse(201, $this->successfulUploadResponseBody()));
         $client = PdfGateClient::createWithTransport('test_key_123', $transport);
@@ -189,11 +189,10 @@ final class PdfGateClientTest extends TestCase
         self::assertSame('https://example.com/input.pdf', $request->getJsonBody()['url']);
         self::assertSame(1200, $request->getJsonBody()['preSignedUrlExpiresIn']);
         self::assertSame(array('env' => 'test'), $request->getJsonBody()['metadata']);
-        self::assertSame(true, $request->getJsonBody()['jsonResponse']);
         self::assertNull($request->getMultipartBody());
     }
 
-    public function testUploadFileWithFileUsesMultipartAndEnforcesJsonResponse(): void
+    public function testUploadFileWithFileUsesMultipart(): void
     {
         $transport = new RecordingTransport(new HttpResponse(201, $this->successfulUploadResponseBody()));
         $client = PdfGateClient::createWithTransport('test_key_123', $transport);
@@ -213,7 +212,6 @@ final class PdfGateClientTest extends TestCase
         self::assertSame($file, $request->getMultipartBody()['file']);
         self::assertSame(1200, $request->getMultipartBody()['preSignedUrlExpiresIn']);
         self::assertSame(array('env' => 'test'), $request->getMultipartBody()['metadata']);
-        self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
     }
 
     public function testUploadFilePrioritizesFileOverUrlWhenBothProvided(): void
@@ -233,7 +231,6 @@ final class PdfGateClientTest extends TestCase
         self::assertNull($request->getJsonBody());
         self::assertSame($file, $request->getMultipartBody()['file']);
         self::assertArrayNotHasKey('url', $request->getMultipartBody());
-        self::assertSame(true, $request->getMultipartBody()['jsonResponse']);
     }
 
     public function testUploadFileReturnsTypedResponse(): void

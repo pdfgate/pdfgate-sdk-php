@@ -91,8 +91,6 @@ class PdfGateClient
      */
     public function uploadFile(array $request): PdfGateDocumentMetadata
     {
-        $request['jsonResponse'] = true;
-
         if (isset($request['file'])) {
             unset($request['url']);
             $response = $this->requestHandler->postMultipart('/upload', $request);
@@ -173,8 +171,6 @@ class PdfGateClient
      */
     public function extractPdfFormData(array $request): array
     {
-        $request['jsonResponse'] = true;
-
         return $this->requestHandler->postJson('/forms/extract-data', $request);
     }
 
