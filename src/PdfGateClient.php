@@ -6,6 +6,7 @@ namespace PdfGate;
 
 use PdfGate\Dto\PdfGateEnvelope;
 use PdfGate\Dto\PdfGateDocumentMetadata;
+use PdfGate\Exception\InvalidArgumentException;
 use PdfGate\Exception\InvalidConfigurationException;
 use PdfGate\Exception\TransportException;
 use PdfGate\Http\ApiRequestHandler;
@@ -213,7 +214,7 @@ class PdfGateClient
     public function sendEnvelope(string $envelopeId): PdfGateEnvelope
     {
         if (trim($envelopeId) === '') {
-            throw new InvalidConfigurationException('Envelope ID cannot be empty.');
+            throw new InvalidArgumentException('Envelope ID cannot be empty.');
         }
 
         $response = $this->requestHandler->postJson(
@@ -233,7 +234,7 @@ class PdfGateClient
     public function getFile(string $documentId)
     {
         if (trim($documentId) === '') {
-            throw new InvalidConfigurationException('Document ID cannot be empty.');
+            throw new InvalidArgumentException('Document ID cannot be empty.');
         }
 
         $body = $this->requestHandler->getBinary('/file/' . rawurlencode($documentId));

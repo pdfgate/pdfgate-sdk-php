@@ -11,6 +11,7 @@ use PdfGate\Enum\DocumentRecipientStatus;
 use PdfGate\Enum\EnvelopeDocumentStatus;
 use PdfGate\Enum\EnvelopeStatus;
 use PdfGate\Exception\ApiException;
+use PdfGate\Exception\InvalidArgumentException;
 use PdfGate\Exception\InvalidConfigurationException;
 use PdfGate\Exception\TransportException;
 use PdfGate\Http\HttpRequest;
@@ -552,7 +553,7 @@ final class PdfGateClientTest extends TestCase
         $transport = new RecordingTransport(new HttpResponse(201, $this->successfulSendEnvelopeResponseBody()));
         $client = PdfGateClient::createWithTransport('test_key_123', $transport);
 
-        $this->expectException(InvalidConfigurationException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Envelope ID cannot be empty.');
 
         $client->sendEnvelope('   ');
@@ -611,7 +612,7 @@ final class PdfGateClientTest extends TestCase
         $transport = new RecordingTransport(new HttpResponse(200, $this->successfulPdfBinaryBody()));
         $client = PdfGateClient::createWithTransport('test_key_123', $transport);
 
-        $this->expectException(InvalidConfigurationException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Document ID cannot be empty.');
 
         $client->getFile('   ');
