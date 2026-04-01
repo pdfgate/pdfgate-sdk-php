@@ -226,6 +226,25 @@ class PdfGateClient
     }
 
     /**
+     * Retrieves the current state of an existing envelope.
+     *
+     * @param string $envelopeId Existing envelope ID.
+     * @return PdfGateEnvelope
+     */
+    public function getEnvelope(string $envelopeId): PdfGateEnvelope
+    {
+        if (trim($envelopeId) === '') {
+            throw new InvalidArgumentException('Envelope ID cannot be empty.');
+        }
+
+        $response = $this->requestHandler->getJson(
+            '/envelope/' . rawurlencode($envelopeId)
+        );
+
+        return $this->buildEnvelopeResponse($response);
+    }
+
+    /**
      * Retrieves a generated PDF file as a readable stream resource.
      *
      * @param string $documentId Generated document identifier.

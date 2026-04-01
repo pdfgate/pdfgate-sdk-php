@@ -294,6 +294,44 @@ HTML;
         );
     }
 
+    public function testGetEnvelopeReturnsEnvelopeMetadata(): void
+    {
+        $envelope = self::$client->createEnvelope(array(
+            'requesterName' => 'Acceptance Suite',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => self::$envelopeSourceDocumentId,
+                    'name' => 'Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                        ),
+                    ),
+                ),
+            ),
+            'metadata' => array(
+                'suite' => 'acceptance-envelope-get',
+                'customerId' => 'cus_123',
+            ),
+        ));
+
+        $fetchedEnvelope = self::$client->getEnvelope($envelope->getId());
+
+        self::assertSame($envelope->getId(), $fetchedEnvelope->getId());
+        self::assertNotSame('', $fetchedEnvelope->getId());
+        self::assertSame('created', $fetchedEnvelope->getStatus());
+        self::assertNotNull($fetchedEnvelope->getCreatedAt());
+        self::assertNotEmpty($fetchedEnvelope->getDocuments());
+        self::assertSame(
+            array(
+                'suite' => 'acceptance-envelope-get',
+                'customerId' => 'cus_123',
+            ),
+            $fetchedEnvelope->getMetadata()
+        );
+    }
+
     public function testGetFileReturnsPdfStream(): void
     {
         $stream = self::$client->getFile(self::$documentId);

@@ -559,6 +559,51 @@ final class PdfGateClientTest extends TestCase
         $client->sendEnvelope('   ');
     }
 
+    public function testGetEnvelopeUsesGetEndpointAndReturnsTypedEnvelopeResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulSendEnvelopeResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->getEnvelope('69c0fa44f83ca6a7015f1c8c');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('/envelope/69c0fa44f83ca6a7015f1c8c', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('https://api-sandbox.pdfgate.com/envelope/69c0fa44f83ca6a7015f1c8c', $request->getUrl());
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertNull($request->getJsonBody());
+        self::assertNull($request->getMultipartBody());
+        self::assertInstanceOf(PdfGateEnvelope::class, $response);
+        self::assertSame('69c0fa44f83ca6a7015f1c8c', $response->getId());
+        self::assertSame(EnvelopeStatus::IN_PROGRESS, $response->getStatus());
+        self::assertCount(1, $response->getDocuments());
+        self::assertSame(array('customerId' => 'cus_123', 'department' => 'sales'), $response->getMetadata());
+    }
+
+    public function testGetEnvelopeEncodesPathSegment(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulSendEnvelopeResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->getEnvelope('env/id with spaces');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/envelope/env%2Fid%20with%20spaces', parse_url($request->getUrl(), PHP_URL_PATH));
+    }
+
+    public function testGetEnvelopeRejectsEmptyEnvelopeId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulSendEnvelopeResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Envelope ID cannot be empty.');
+
+        $client->getEnvelope('   ');
+    }
+
     public function testGetDocumentWrapsTransportFailuresWithRequestContext(): void
     {
         $previous = new RuntimeException('socket failure');

@@ -60,6 +60,14 @@ $envelope = $client->createEnvelope([
 $sentEnvelope = $client->sendEnvelope('69c0fa44f83ca6a7015f1c8c');
 ```
 
+## Get Envelope
+
+`getEnvelope()` retrieves the current envelope state so you can inspect overall status, document progress, and recipient status details.
+
+```php
+$envelope = $client->getEnvelope('69c0fa44f83ca6a7015f1c8c');
+```
+
 ## Flatten PDF
 
 ```php
