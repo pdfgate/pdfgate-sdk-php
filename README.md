@@ -9,6 +9,7 @@ PDFGate lets you generate, process, and secure PDFs via a simple API:
 
 - HTML or URL to PDF
 - Fillable forms
+- Create signing envelopes from source documents
 - Flatten, compress, watermark, protect PDFs
 - Extract PDF form data
 
@@ -69,6 +70,33 @@ $client->uploadFile([
 ]);
 ```
 
+### Create Envelope
+
+```php
+use PdfGate\Enum\EnvelopeStatus;
+
+$envelope = $client->createEnvelope([
+    'requesterName' => 'John Doe',
+    'documents' => [
+        [
+            'sourceDocumentId' => '6642381c5c61',
+            'name' => 'Employment Agreement',
+            'recipients' => [
+                [
+                    'email' => 'anna@example.com',
+                    'name' => 'Anna Smith',
+                ],
+            ],
+        ],
+    ],
+    'metadata' => ['customerId' => 'cus_123'],
+]);
+
+if ($envelope->getStatus() === EnvelopeStatus::CREATED) {
+    echo $envelope->getId();
+}
+```
+
 ### Download File
 
 ```php
@@ -79,7 +107,7 @@ fclose($output);
 fclose($stream);
 ```
 
-For complete operation examples (`flattenPdf`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`), see [API](docs/guides/api.md).
+For complete operation examples (`flattenPdf`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `createEnvelope`), see [API](docs/guides/api.md).
 
 To download generated files, enable **Save files for one month** in PDFGate Dashboard settings.
 

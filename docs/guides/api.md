@@ -29,6 +29,29 @@ $client->uploadFile([
 ]);
 ```
 
+## Create Envelope
+
+`createEnvelope()` sends JSON with nested envelope documents and recipients. Optional fields like `metadata` and recipient `role` are omitted automatically when set to `null`.
+
+```php
+$envelope = $client->createEnvelope([
+    'requesterName' => 'John Doe',
+    'documents' => [
+        [
+            'sourceDocumentId' => '6642381c5c61',
+            'name' => 'Employment Agreement',
+            'recipients' => [
+                [
+                    'email' => 'anna@example.com',
+                    'name' => 'Anna Smith',
+                ],
+            ],
+        ],
+    ],
+    'metadata' => ['customerId' => 'cus_123'],
+]);
+```
+
 ## Flatten PDF
 
 ```php

@@ -10,11 +10,35 @@ use PHPUnit\Framework\TestCase;
 
 final class PdfGateClientAcceptanceTest extends TestCase
 {
+    private const ENVELOPE_SOURCE_HTML = <<<'HTML'
+<html>
+<body style="font-family: Arial, sans-serif; padding: 40px;">
+  <h2>Agreement</h2>
+  <p>Please review and complete the required fields below.</p>
+  <div style="margin-top: 30px;">
+    <label>Full Name</label><br />
+    <input type="text" name="recipient-name" style="width: 300px; height: 30px;" />
+  </div>
+  <div style="margin-top: 30px;">
+    <label>Signature</label><br />
+    <pdfgate-signature-field name="signature" style="width: 200px; height: 200px;"></pdfgate-signature-field>
+  </div>
+  <div style="margin-top: 30px;">
+    <label>Date</label><br />
+    <input type="datetime-local" name="signature-date" pdfgate-auto-fill="true" style="width: 200px; height: 30px;" />
+  </div>
+</body>
+</html>
+HTML;
+
     /** @var PdfGateClient */
     private static $client;
 
     /** @var string */
     private static $documentId;
+
+    /** @var string */
+    private static $envelopeSourceDocumentId;
 
     public static function setUpBeforeClass(): void
     {
@@ -31,6 +55,13 @@ final class PdfGateClientAcceptanceTest extends TestCase
             'metadata' => array('suite' => 'acceptance-shared-source'),
         ));
         self::$documentId = $shared->getId();
+
+        $envelopeSource = self::$client->generatePdf(array(
+            'html' => self::ENVELOPE_SOURCE_HTML,
+            'enableFormFields' => true,
+            'metadata' => array('suite' => 'acceptance-envelope-source'),
+        ));
+        self::$envelopeSourceDocumentId = $envelopeSource->getId();
     }
 
     public function testGeneratePdfReturnsDocument(): void
@@ -189,6 +220,41 @@ final class PdfGateClientAcceptanceTest extends TestCase
         self::assertSame(self::$documentId, $document->getId());
         self::assertSame('completed', $document->getStatus());
         self::assertSame('from_html', $document->getType());
+    }
+
+    public function testCreateEnvelopeReturnsEnvelopeMetadata(): void
+    {
+        $envelope = self::$client->createEnvelope(array(
+            'requesterName' => 'Acceptance Suite',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => self::$envelopeSourceDocumentId,
+                    'name' => 'Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                        ),
+                    ),
+                ),
+            ),
+            'metadata' => array(
+                'suite' => 'acceptance-envelope',
+                'customerId' => 'cus_123',
+            ),
+        ));
+
+        self::assertNotSame('', $envelope->getId());
+        self::assertSame('created', $envelope->getStatus());
+        self::assertNotNull($envelope->getCreatedAt());
+        self::assertNotEmpty($envelope->getDocuments());
+        self::assertSame(
+            array(
+                'suite' => 'acceptance-envelope',
+                'customerId' => 'cus_123',
+            ),
+            $envelope->getMetadata()
+        );
     }
 
     public function testGetFileReturnsPdfStream(): void

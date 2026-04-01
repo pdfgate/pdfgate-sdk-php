@@ -111,6 +111,21 @@ namespace PdfGate\Type;
  * @phpstan-type GetDocumentQueryPayload array{
  *   preSignedUrlExpiresIn?: int
  * }
+ * @phpstan-type EnvelopeRecipientPayload array{
+ *   email: string,
+ *   name: string,
+ *   role?: string
+ * }
+ * @phpstan-type EnvelopeDocumentPayload array{
+ *   sourceDocumentId: string,
+ *   name: string,
+ *   recipients: list<EnvelopeRecipientPayload>
+ * }
+ * @phpstan-type CreateEnvelopeRequestPayload array{
+ *   documents: list<EnvelopeDocumentPayload>,
+ *   requesterName: string,
+ *   metadata?: array<string,mixed>
+ * }
  */
 interface Types
 {

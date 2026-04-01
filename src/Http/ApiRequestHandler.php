@@ -54,6 +54,7 @@ class ApiRequestHandler
      */
     public function postJson(string $path, array $payload): array
     {
+        $payload = $this->normalizeArray($payload);
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
             ->withPath($path)
@@ -79,6 +80,7 @@ class ApiRequestHandler
      */
     public function postMultipart(string $path, array $payload): array
     {
+        $payload = $this->normalizeArray($payload);
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
             ->withPath($path)
@@ -104,6 +106,7 @@ class ApiRequestHandler
      */
     public function getJson(string $path, array $query = array()): array
     {
+        $query = $this->normalizeArray($query);
         $url = (new UrlBuilder())
             ->withDomain($this->baseUrl)
             ->withPath($path)
@@ -174,13 +177,8 @@ class ApiRequestHandler
             throw new TransportException('Expected JSON object response body.');
         }
 
-        // Decode as object first so we can reject top-level JSON arrays, then
-        // convert to array for SDK return shape.
-        // If associative=true would be used for json_decode, then both {} and
-        // [] would decode to PHP arrays and there'd be no way to differentiate
-        // them.
         /** @var array<string,mixed> $decodedArray */
-        $decodedArray = get_object_vars($decoded);
+        $decodedArray = $this->convertObjectToArray($decoded);
         return $decodedArray;
     }
 
@@ -213,5 +211,76 @@ class ApiRequestHandler
         }
 
         return substr($body, 0, self::ERROR_BODY_LIMIT) . '...';
+    }
+
+    /**
+     * @param array<string,mixed> $payload
+     * @return array<string,mixed>
+     */
+    private function normalizeArray(array $payload): array
+    {
+        $normalized = array();
+
+        foreach ($payload as $key => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $normalized[$key] = $this->normalizeArray($value);
+                continue;
+            }
+
+            if (is_object($value) && !$value instanceof \CURLFile) {
+                /** @var array<string,mixed> $fields */
+                $fields = get_object_vars($value);
+                $normalized[$key] = $this->normalizeArray($fields);
+                continue;
+            }
+
+            $normalized[$key] = $value;
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param object $decoded
+     * @return array<string,mixed>
+     */
+    private function convertObjectToArray(object $decoded): array
+    {
+        /** @var array<string,mixed> $fields */
+        $fields = get_object_vars($decoded);
+        $normalized = array();
+
+        foreach ($fields as $key => $value) {
+            $normalized[$key] = $this->convertJsonValue($value);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param mixed $value
+     * @return mixed
+     */
+    private function convertJsonValue($value)
+    {
+        if (is_object($value)) {
+            return $this->convertObjectToArray($value);
+        }
+
+        if (is_array($value)) {
+            $normalized = array();
+
+            foreach ($value as $key => $childValue) {
+                $normalized[$key] = $this->convertJsonValue($childValue);
+            }
+
+            return $normalized;
+        }
+
+        return $value;
     }
 }

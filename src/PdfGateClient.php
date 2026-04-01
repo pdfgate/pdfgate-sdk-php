@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PdfGate;
 
+use PdfGate\Dto\PdfGateEnvelope;
 use PdfGate\Dto\PdfGateDocumentMetadata;
 use PdfGate\Exception\InvalidConfigurationException;
 use PdfGate\Exception\TransportException;
@@ -22,6 +23,7 @@ use PdfGate\Http\HttpTransportInterface;
  * @phpstan-import-type WatermarkPdfRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type ExtractPdfFormDataRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type GetDocumentQueryPayload from \PdfGate\Type\Types
+ * @phpstan-import-type CreateEnvelopeRequestPayload from \PdfGate\Type\Types
  */
 class PdfGateClient
 {
@@ -194,6 +196,19 @@ class PdfGateClient
     }
 
     /**
+     * Creates a signing envelope from existing source documents.
+     *
+     * @param CreateEnvelopeRequestPayload $request Create envelope request payload.
+     * @return PdfGateEnvelope
+     */
+    public function createEnvelope(array $request): PdfGateEnvelope
+    {
+        $response = $this->requestHandler->postJson('/envelope', $request);
+
+        return $this->buildEnvelopeResponse($response);
+    }
+
+    /**
      * Retrieves a generated PDF file as a readable stream resource.
      *
      * @param string $documentId Generated document identifier.
@@ -233,5 +248,13 @@ class PdfGateClient
         }
 
         throw new InvalidConfigurationException('API key must start with "live_" or "test_".');
+    }
+
+    /**
+     * @param array<string,mixed> $response
+     */
+    private function buildEnvelopeResponse(array $response): PdfGateEnvelope
+    {
+        return PdfGateEnvelope::fromArray($response);
     }
 }

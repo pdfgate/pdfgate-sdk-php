@@ -55,6 +55,51 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame(array(), $result);
     }
 
+    public function testPostJsonResponseDecodesNestedObjectsRecursively(): void
+    {
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            new StaticResponseTransport(new HttpResponse(200, '{"id":"env_123","documents":[{"recipients":[{"fields":[{"name":"signature","type":"signature"}]}]}]}'))
+        );
+
+        $result = $handler->postJson('/envelope', array('requesterName' => 'John Doe', 'documents' => array()));
+
+        self::assertSame('signature', $result['documents'][0]['recipients'][0]['fields'][0]['name']);
+        self::assertSame('signature', $result['documents'][0]['recipients'][0]['fields'][0]['type']);
+    }
+
+    public function testPostJsonResponseOmitsNullFieldsRecursively(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"env_123"}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $handler->postJson('/envelope', array(
+            'requesterName' => 'John Doe',
+            'metadata' => null,
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => 'doc_123',
+                    'name' => 'Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna',
+                            'role' => null,
+                        ),
+                    ),
+                ),
+            ),
+        ));
+
+        self::assertArrayNotHasKey('metadata', $transport->lastRequest->getJsonBody());
+        self::assertArrayNotHasKey('role', $transport->lastRequest->getJsonBody()['documents'][0]['recipients'][0]);
+    }
+
     public function testPostJsonResponseThrowsApiExceptionOnNonSuccessStatusCode(): void
     {
         $handler = new ApiRequestHandler(

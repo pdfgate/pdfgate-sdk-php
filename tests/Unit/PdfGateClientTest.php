@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 namespace PdfGate\Tests\Unit;
 
+use PdfGate\Dto\PdfGateEnvelope;
 use PdfGate\Dto\PdfGateDocumentMetadata;
+use PdfGate\Enum\DocumentFieldType;
+use PdfGate\Enum\DocumentRecipientStatus;
+use PdfGate\Enum\EnvelopeDocumentStatus;
+use PdfGate\Enum\EnvelopeStatus;
 use PdfGate\Exception\ApiException;
 use PdfGate\Exception\InvalidConfigurationException;
 use PdfGate\Exception\TransportException;
@@ -435,6 +440,86 @@ final class PdfGateClientTest extends TestCase
         $client->getDocument('missing_doc');
     }
 
+    public function testCreateEnvelopeSerializesNestedPayloadAndBuildsTypedResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulCreateEnvelopeResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->createEnvelope(array(
+            'requesterName' => 'John Doe',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => '6642381c5c61',
+                    'name' => 'Employment Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                            'role' => 'signer',
+                        ),
+                    ),
+                ),
+            ),
+            'metadata' => array(
+                'customerId' => 'cus_123',
+                'department' => 'sales',
+            ),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/envelope', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('John Doe', $request->getJsonBody()['requesterName']);
+        self::assertSame('6642381c5c61', $request->getJsonBody()['documents'][0]['sourceDocumentId']);
+        self::assertSame('Employment Agreement', $request->getJsonBody()['documents'][0]['name']);
+        self::assertSame('anna@example.com', $request->getJsonBody()['documents'][0]['recipients'][0]['email']);
+        self::assertSame('Anna Smith', $request->getJsonBody()['documents'][0]['recipients'][0]['name']);
+        self::assertSame('signer', $request->getJsonBody()['documents'][0]['recipients'][0]['role']);
+        self::assertSame(array('customerId' => 'cus_123', 'department' => 'sales'), $request->getJsonBody()['metadata']);
+
+        self::assertInstanceOf(PdfGateEnvelope::class, $response);
+        self::assertSame('69c0fa44f83ca6a7015f1c8c', $response->getId());
+        self::assertSame(EnvelopeStatus::CREATED, $response->getStatus());
+        self::assertSame('2024-02-13T15:56:12+00:00', $response->getCreatedAt()->format(DATE_ATOM));
+        self::assertSame(array('customerId' => 'cus_123', 'department' => 'sales'), $response->getMetadata());
+        self::assertCount(1, $response->getDocuments());
+        self::assertSame(EnvelopeDocumentStatus::PENDING, $response->getDocuments()[0]->getStatus());
+        self::assertSame('69bd87a32da418e6c4d2azze', $response->getDocuments()[0]->getSourceDocumentId());
+        self::assertCount(1, $response->getDocuments()[0]->getRecipients());
+        self::assertSame('anna@example.com', $response->getDocuments()[0]->getRecipients()[0]->getEmail());
+        self::assertSame(DocumentRecipientStatus::PENDING, $response->getDocuments()[0]->getRecipients()[0]->getStatus());
+        self::assertCount(1, $response->getDocuments()[0]->getRecipients()[0]->getFields());
+        self::assertSame('signature', $response->getDocuments()[0]->getRecipients()[0]->getFields()[0]->getName());
+        self::assertSame(DocumentFieldType::SIGNATURE, $response->getDocuments()[0]->getRecipients()[0]->getFields()[0]->getType());
+    }
+
+    public function testCreateEnvelopeOmitsOptionalFieldsRecursively(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulCreateEnvelopeResponseBodyWithoutMetadata()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->createEnvelope(array(
+            'requesterName' => 'John Doe',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => '6642381c5c61',
+                    'name' => 'Employment Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                        ),
+                    ),
+                ),
+            ),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertArrayNotHasKey('metadata', $request->getJsonBody());
+        self::assertArrayNotHasKey('role', $request->getJsonBody()['documents'][0]['recipients'][0]);
+    }
+
     public function testGetDocumentWrapsTransportFailuresWithRequestContext(): void
     {
         $previous = new RuntimeException('socket failure');
@@ -552,6 +637,16 @@ final class PdfGateClientTest extends TestCase
     private function successfulGetDocumentResponseWithoutTypeBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z"}';
+    }
+
+    private function successfulCreateEnvelopeResponseBody(): string
+    {
+        return '{"id":"69c0fa44f83ca6a7015f1c8c","status":"created","documents":[{"sourceDocumentId":"69bd87a32da418e6c4d2azze","recipients":[{"email":"anna@example.com","status":"pending","fields":[{"name":"signature","type":"signature"}]}],"status":"pending"}],"createdAt":"2024-02-13T15:56:12.607Z","metadata":{"customerId":"cus_123","department":"sales"}}';
+    }
+
+    private function successfulCreateEnvelopeResponseBodyWithoutMetadata(): string
+    {
+        return '{"id":"69c0fa44f83ca6a7015f1c8c","status":"created","documents":[{"sourceDocumentId":"69bd87a32da418e6c4d2azze","recipients":[{"email":"anna@example.com","status":"pending","fields":[]}],"status":"pending"}],"createdAt":"2024-02-13T15:56:12.607Z"}';
     }
 
     private function successfulPdfBinaryBody(): string
