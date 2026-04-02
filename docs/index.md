@@ -13,6 +13,7 @@ PDFGate lets you generate, process, and secure PDFs via a simple API:
 
 - [Quickstart](guides/quickstart.md)
 - [Usage Guide](guides/api.md)
+- [Webhook Verification](guides/webhooks.md)
 - [Error Handling](guides/error-handling.md)
 - [Testing and Tooling](guides/testing.md)
 - [API Reference](/api/)

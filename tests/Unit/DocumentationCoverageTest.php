@@ -19,6 +19,7 @@ final class DocumentationCoverageTest extends TestCase
         $expectedLinks = array(
             'guides/quickstart.md',
             'guides/api.md',
+            'guides/webhooks.md',
             'guides/error-handling.md',
             'guides/testing.md',
         );

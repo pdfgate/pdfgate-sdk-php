@@ -41,6 +41,21 @@ try {
 }
 ```
 
+## `PdfGate\Exception\SignatureVerificationException`
+
+Thrown when webhook signature verification fails because the timestamp is missing, the signature is expired, or none of the provided `v1` signatures matches.
+
+```php
+use PdfGate\Exception\SignatureVerificationException;
+use PdfGate\Webhook\WebhookSignatureVerifier;
+
+try {
+    WebhookSignatureVerifier::verify($secret, $signatureHeader, $rawBody);
+} catch (SignatureVerificationException $e) {
+    error_log($e->getMessage());
+}
+```
+
 ## Retry guidance
 
 - Retry transport errors when they are transient (timeouts, temporary DNS/connectivity failures).

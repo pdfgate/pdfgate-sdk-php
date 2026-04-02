@@ -143,8 +143,30 @@ Non-2xx responses throw `PdfGate\Exception\ApiException` with:
 - `getResponseBody()` (truncated)
 
 Transport and parsing failures throw `PdfGate\Exception\TransportException` and preserve original causes.
+Webhook verification failures throw `PdfGate\Exception\SignatureVerificationException`.
 
 See [Error handling guide](docs/guides/error-handling.md) for patterns and retry guidance.
+
+## Webhook Verification
+
+Use [WebhookSignatureVerifier](/Users/ferg/repos/pdfgate-sdk-php/src/Webhook/WebhookSignatureVerifier.php) to verify the `x-pdfgate-signature` header against the raw request body and your webhook secret.
+
+```php
+use PdfGate\Exception\SignatureVerificationException;
+use PdfGate\Webhook\WebhookSignatureVerifier;
+
+$secret = 'whsecret_...';
+$signatureHeader = $_SERVER['HTTP_X_PDFGATE_SIGNATURE'] ?? null;
+$rawBody = file_get_contents('php://input');
+
+try {
+    WebhookSignatureVerifier::verify($secret, $signatureHeader, $rawBody === false ? '' : $rawBody);
+    http_response_code(200);
+} catch (SignatureVerificationException $e) {
+    error_log($e->getMessage());
+    http_response_code(400);
+}
+```
 
 ## Development
 
