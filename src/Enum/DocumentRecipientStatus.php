@@ -10,6 +10,7 @@ namespace PdfGate\Enum;
 final class DocumentRecipientStatus
 {
     public const PENDING = 'pending';
+    public const EXPIRED = 'expired';
     public const SIGNED = 'signed';
 
     private function __construct()

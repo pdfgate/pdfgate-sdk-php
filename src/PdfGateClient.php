@@ -6,6 +6,7 @@ namespace PdfGate;
 
 use PdfGate\Dto\PdfGateEnvelope;
 use PdfGate\Dto\PdfGateDocumentMetadata;
+use PdfGate\Dto\WebhookResponse;
 use PdfGate\Exception\InvalidArgumentException;
 use PdfGate\Exception\InvalidConfigurationException;
 use PdfGate\Exception\TransportException;
@@ -25,6 +26,8 @@ use PdfGate\Http\HttpTransportInterface;
  * @phpstan-import-type ExtractPdfFormDataRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type GetDocumentQueryPayload from \PdfGate\Type\Types
  * @phpstan-import-type CreateEnvelopeRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type AddFormFieldsRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type CreateWebhookRequestPayload from \PdfGate\Type\Types
  */
 class PdfGateClient
 {
@@ -120,6 +123,21 @@ class PdfGateClient
     }
 
     /**
+     * Adds interactive form fields to an existing PDF document.
+     *
+     * @param AddFormFieldsRequestPayload $request Add form fields request payload.
+     * @return PdfGateDocumentMetadata
+     */
+    public function addFormFields(array $request): PdfGateDocumentMetadata
+    {
+        $request['jsonResponse'] = true;
+
+        $response = $this->requestHandler->postJson('/forms/fields', $request);
+
+        return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
      * Compresses an existing PDF document.
      *
      * @param CompressPdfRequestPayload $request Compress PDF request payload.
@@ -190,6 +208,23 @@ class PdfGateClient
         );
 
         return PdfGateDocumentMetadata::fromArray($response);
+    }
+
+    /**
+     * Permanently deletes a stored document.
+     *
+     * A document referenced by a draft or in-progress envelope cannot be deleted
+     * until those envelopes are completed or expired.
+     *
+     * @param string $documentId Existing document ID.
+     */
+    public function deleteDocument(string $documentId): void
+    {
+        if (trim($documentId) === '') {
+            throw new InvalidArgumentException('Document ID cannot be empty.');
+        }
+
+        $this->requestHandler->delete('/document/' . rawurlencode($documentId));
     }
 
     /**
@@ -271,6 +306,55 @@ class PdfGateClient
         rewind($stream);
 
         return $stream;
+    }
+
+    /**
+     * Registers a webhook endpoint to receive PDFGate event notifications.
+     *
+     * The response includes a secret (returned only once, at creation time) used to
+     * verify webhook payloads via the webhook signature verifier.
+     *
+     * @param CreateWebhookRequestPayload $request Create webhook request payload.
+     * @return WebhookResponse
+     */
+    public function createWebhook(array $request): WebhookResponse
+    {
+        $response = $this->requestHandler->postJson('/webhook', $request);
+
+        return WebhookResponse::fromArray($response);
+    }
+
+    /**
+     * Retrieves a registered webhook by ID.
+     *
+     * The secret is not returned by this endpoint (only at creation time).
+     *
+     * @param string $webhookId Existing webhook ID.
+     * @return WebhookResponse
+     */
+    public function getWebhook(string $webhookId): WebhookResponse
+    {
+        if (trim($webhookId) === '') {
+            throw new InvalidArgumentException('Webhook ID cannot be empty.');
+        }
+
+        $response = $this->requestHandler->getJson('/webhook/' . rawurlencode($webhookId));
+
+        return WebhookResponse::fromArray($response);
+    }
+
+    /**
+     * Deletes a registered webhook.
+     *
+     * @param string $webhookId Existing webhook ID.
+     */
+    public function deleteWebhook(string $webhookId): void
+    {
+        if (trim($webhookId) === '') {
+            throw new InvalidArgumentException('Webhook ID cannot be empty.');
+        }
+
+        $this->requestHandler->delete('/webhook/' . rawurlencode($webhookId));
     }
 
     private function resolveBaseUrl(string $apiKey): string

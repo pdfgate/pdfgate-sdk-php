@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace PdfGate\Tests\Acceptance;
 
+use PdfGate\Enum\DocumentFieldType;
+use PdfGate\Enum\WebhookEventType;
+use PdfGate\Enum\WebhookStatus;
 use PdfGate\Exception\ApiException;
 use PdfGate\PdfGateClient;
 use PHPUnit\Framework\TestCase;
@@ -362,5 +365,80 @@ HTML;
 
         // Invalid request: API requires either "html" or "url".
         self::$client->generatePdf(array());
+    }
+
+    public function testFlattenPdfWithFieldNamesReturnsFlattened(): void
+    {
+        $flattened = self::$client->flattenPdf(array(
+            'documentId' => self::$documentId,
+            'fieldNames' => array('field1'),
+        ));
+
+        self::assertSame('completed', $flattened->getStatus());
+        self::assertSame('flattened', $flattened->getType());
+    }
+
+    public function testAddFormFieldsReturnsDocumentMetadata(): void
+    {
+        $result = self::$client->addFormFields(array(
+            'documentId' => self::$documentId,
+            'fields' => array(
+                array(
+                    'name' => 'full_name',
+                    'type' => DocumentFieldType::TEXT,
+                    'page' => 1,
+                    'x' => 50,
+                    'y' => 500,
+                    'width' => 200,
+                    'height' => 24,
+                ),
+            ),
+        ));
+
+        self::assertNotSame(self::$documentId, $result->getId());
+        self::assertSame('completed', $result->getStatus());
+        self::assertSame('document_fields_added', $result->getType());
+    }
+
+    public function testDeleteDocumentRemovesDocument(): void
+    {
+        $doc = self::$client->generatePdf(array(
+            'html' => '<html><body><h1>Delete me</h1></body></html>',
+        ));
+
+        self::$client->deleteDocument($doc->getId());
+
+        $this->expectException(ApiException::class);
+        self::$client->getDocument($doc->getId());
+    }
+
+    public function testWebhookLifecycle(): void
+    {
+        $url = 'https://example.com/pdfgate-hook-' . bin2hex(random_bytes(8));
+
+        $created = self::$client->createWebhook(array(
+            'url' => $url,
+            'eventTypes' => array(
+                WebhookEventType::ENVELOPE_COMPLETED,
+                WebhookEventType::ENVELOPE_SENT,
+            ),
+            'description' => 'PHP SDK acceptance test',
+        ));
+
+        self::assertNotSame('', $created->getId());
+        self::assertSame($url, $created->getUrl());
+        self::assertSame(WebhookStatus::ACTIVE, $created->getStatus());
+        self::assertNotNull($created->getSecret());
+
+        try {
+            $fetched = self::$client->getWebhook($created->getId());
+            self::assertSame($created->getId(), $fetched->getId());
+            self::assertNull($fetched->getSecret());
+        } finally {
+            self::$client->deleteWebhook($created->getId());
+        }
+
+        $this->expectException(ApiException::class);
+        self::$client->getWebhook($created->getId());
     }
 }

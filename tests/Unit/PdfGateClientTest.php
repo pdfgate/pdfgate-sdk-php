@@ -6,10 +6,13 @@ namespace PdfGate\Tests\Unit;
 
 use PdfGate\Dto\PdfGateEnvelope;
 use PdfGate\Dto\PdfGateDocumentMetadata;
+use PdfGate\Dto\WebhookResponse;
 use PdfGate\Enum\DocumentFieldType;
 use PdfGate\Enum\DocumentRecipientStatus;
 use PdfGate\Enum\EnvelopeDocumentStatus;
 use PdfGate\Enum\EnvelopeStatus;
+use PdfGate\Enum\WebhookEventType;
+use PdfGate\Enum\WebhookStatus;
 use PdfGate\Exception\ApiException;
 use PdfGate\Exception\InvalidArgumentException;
 use PdfGate\Exception\InvalidConfigurationException;
@@ -491,6 +494,55 @@ final class PdfGateClientTest extends TestCase
         self::assertSame(DocumentFieldType::SIGNATURE, $response->getDocuments()[0]->getRecipients()[0]->getFields()[0]->getType());
     }
 
+    public function testCreateEnvelopeForwardsRecipientReminderFields(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulCreateEnvelopeResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->createEnvelope(array(
+            'requesterName' => 'John Doe',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => '6642381c5c61',
+                    'name' => 'Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                            'reminderIntervalDays' => 2,
+                            'reminderAttempts' => 3,
+                        ),
+                    ),
+                ),
+            ),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        $recipient = $request->getJsonBody()['documents'][0]['recipients'][0];
+        self::assertSame(2, $recipient['reminderIntervalDays']);
+        self::assertSame(3, $recipient['reminderAttempts']);
+    }
+
+    public function testGetEnvelopeParsesRecipientLinksAndFieldTimezoneFields(): void
+    {
+        $body = '{"id":"env_1","status":"in_progress","createdAt":"2024-02-13T15:56:12.607Z","documents":[{"sourceDocumentId":"doc_1","status":"pending","recipients":[{"email":"a@example.com","status":"pending","signingLink":"https://sign.example/abc","previewLink":"https://preview.example/abc","fields":[{"name":"signature-date","type":"datetime","timezone":"UTC","source":"user","userValue":"2026-01-01T10:00:00","userTimezone":"Europe/Athens"}]}]}]}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $envelope = $client->getEnvelope('env_1');
+
+        $recipient = $envelope->getDocuments()[0]->getRecipients()[0];
+        self::assertSame('https://sign.example/abc', $recipient->getSigningLink());
+        self::assertSame('https://preview.example/abc', $recipient->getPreviewLink());
+
+        $field = $recipient->getFields()[0];
+        self::assertSame('UTC', $field->getTimezone());
+        self::assertSame('user', $field->getSource());
+        self::assertSame('2026-01-01T10:00:00', $field->getUserValue());
+        self::assertSame('Europe/Athens', $field->getUserTimezone());
+    }
+
     public function testCreateEnvelopeOmitsOptionalFieldsRecursively(): void
     {
         $transport = new RecordingTransport(new HttpResponse(201, $this->successfulCreateEnvelopeResponseBodyWithoutMetadata()));
@@ -691,6 +743,152 @@ final class PdfGateClientTest extends TestCase
             self::assertStringContainsString('GET https://api-sandbox.pdfgate.com/file/doc_123', $e->getMessage());
             self::assertStringContainsString('RuntimeException: socket failure', $e->getMessage());
         }
+    }
+
+    public function testFlattenPdfForwardsFieldNames(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulFlattenResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->flattenPdf(array(
+            'documentId' => 'doc_123',
+            'fieldNames' => array('name', 'email'),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/forms/flatten', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame(array('name', 'email'), $request->getJsonBody()['fieldNames']);
+        self::assertSame(true, $request->getJsonBody()['jsonResponse']);
+    }
+
+    public function testAddFormFieldsSendsOverridesAndFields(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulAddFormFieldsResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->addFormFields(array(
+            'documentId' => 'doc_123',
+            'fieldOverrides' => array(
+                'full_name' => array('role' => 'signer', 'fontSize' => 12),
+            ),
+            'fields' => array(
+                array(
+                    'name' => 'signed_on',
+                    'type' => DocumentFieldType::DATE,
+                    'page' => 1,
+                    'x' => 10,
+                    'y' => 20,
+                    'width' => 100,
+                    'height' => 24,
+                ),
+            ),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/forms/fields', parse_url($request->getUrl(), PHP_URL_PATH));
+        $body = $request->getJsonBody();
+        self::assertSame('doc_123', $body['documentId']);
+        self::assertSame(true, $body['jsonResponse']);
+        // Field-override keys are preserved verbatim.
+        self::assertArrayHasKey('full_name', $body['fieldOverrides']);
+        self::assertSame('signer', $body['fieldOverrides']['full_name']['role']);
+        self::assertSame('signed_on', $body['fields'][0]['name']);
+        self::assertSame('date', $body['fields'][0]['type']);
+        self::assertInstanceOf(PdfGateDocumentMetadata::class, $response);
+        self::assertSame('document_fields_added', $response->getType());
+    }
+
+    public function testDeleteDocumentSendsDeleteRequest(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(204, ''));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->deleteDocument('doc_123');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('DELETE', $request->getMethod());
+        self::assertSame('/document/doc_123', parse_url($request->getUrl(), PHP_URL_PATH));
+    }
+
+    public function testDeleteDocumentRejectsEmptyId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(204, ''));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $client->deleteDocument('  ');
+    }
+
+    public function testCreateWebhookSendsConfigAndParsesResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulWebhookResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->createWebhook(array(
+            'url' => 'https://example.com/hook',
+            'eventTypes' => array(WebhookEventType::ENVELOPE_COMPLETED, WebhookEventType::ENVELOPE_SENT),
+            'description' => 'my hook',
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('/webhook', parse_url($request->getUrl(), PHP_URL_PATH));
+        $body = $request->getJsonBody();
+        self::assertSame('https://example.com/hook', $body['url']);
+        self::assertSame(array('envelope.completed', 'envelope.sent'), $body['eventTypes']);
+        self::assertSame('my hook', $body['description']);
+
+        self::assertInstanceOf(WebhookResponse::class, $response);
+        self::assertSame('wh_123', $response->getId());
+        self::assertSame(WebhookStatus::ACTIVE, $response->getStatus());
+        self::assertSame(array('envelope.completed'), $response->getEventTypes());
+        self::assertSame('whsec_abc', $response->getSecret());
+    }
+
+    public function testGetWebhookUsesGetEndpoint(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulWebhookResponseBodyWithoutSecret()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->getWebhook('wh_123');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('/webhook/wh_123', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('wh_123', $response->getId());
+        self::assertNull($response->getSecret());
+    }
+
+    public function testDeleteWebhookSendsDeleteRequest(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(204, ''));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->deleteWebhook('wh_123');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('DELETE', $request->getMethod());
+        self::assertSame('/webhook/wh_123', parse_url($request->getUrl(), PHP_URL_PATH));
+    }
+
+    private function successfulAddFormFieldsResponseBody(): string
+    {
+        return '{"id":"6642381c5c61","status":"completed","type":"document_fields_added","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z","derivedFrom":"doc_123"}';
+    }
+
+    private function successfulWebhookResponseBody(): string
+    {
+        return '{"id":"wh_123","url":"https://example.com/hook","eventTypes":["envelope.completed"],"status":"active","secret":"whsec_abc","createdAt":"2024-02-13T15:56:12.607Z"}';
+    }
+
+    private function successfulWebhookResponseBodyWithoutSecret(): string
+    {
+        return '{"id":"wh_123","url":"https://example.com/hook","eventTypes":["envelope.sent"],"status":"active","createdAt":"2024-02-13T15:56:12.607Z"}';
     }
 
     private function successfulGenerateResponseBody(): string

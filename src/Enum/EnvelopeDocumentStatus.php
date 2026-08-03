@@ -10,6 +10,7 @@ namespace PdfGate\Enum;
 final class EnvelopeDocumentStatus
 {
     public const PENDING = 'pending';
+    public const EXPIRED = 'expired';
     public const SENT_FOR_SIGNING = 'sent_for_signing';
     public const SIGNING_IN_PROGRESS = 'signing_in_progress';
     public const SIGNING_FAILED = 'signing_failed';

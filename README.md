@@ -8,10 +8,12 @@ Official PHP SDK for the PDFGate HTTP API.
 PDFGate lets you generate, process, and secure PDFs via a simple API:
 
 - HTML or URL to PDF
-- Fillable forms
+- Fillable forms and adding form fields
 - Create signing envelopes from source documents
-- Flatten, compress, watermark, protect PDFs
+- Flatten (all or specific fields), compress, watermark, protect PDFs
 - Extract PDF form data
+- Delete stored documents
+- Manage and verify webhooks
 
 🚀 SDK Documentation: https://pdfgate.github.io/pdfgate-sdk-php<br>
 🧭 API Reference: https://pdfgate.github.io/pdfgate-sdk-php/api/<br>
@@ -131,7 +133,68 @@ fclose($output);
 fclose($stream);
 ```
 
-For complete operation examples (`flattenPdf`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `createEnvelope`, `sendEnvelope`, `getEnvelope`), see [API](docs/guides/api.md).
+### Add Form Fields
+
+```php
+use PdfGate\Enum\DocumentFieldType;
+
+$doc = $client->addFormFields([
+    'documentId' => $documentId,
+    // Customize placeholder fields detected in the PDF, keyed by field name.
+    'fieldOverrides' => [
+        'signature' => ['role' => 'signer', 'optional' => false],
+    ],
+    // Or place fields at explicit positions on a given page.
+    'fields' => [
+        [
+            'name' => 'signed_on',
+            'type' => DocumentFieldType::DATE,
+            'page' => 1,
+            'x' => 100,
+            'y' => 650,
+            'width' => 160,
+            'height' => 24,
+        ],
+    ],
+]);
+```
+
+### Flatten Specific Fields
+
+```php
+$flattened = $client->flattenPdf([
+    'documentId' => $documentId,
+    // Omit fieldNames to flatten the whole document.
+    'fieldNames' => ['signature', 'date'],
+]);
+```
+
+### Delete a Document
+
+```php
+$client->deleteDocument($documentId);
+```
+
+### Manage Webhooks
+
+```php
+use PdfGate\Enum\WebhookEventType;
+
+// The returned secret is shown only once — store it to verify payloads.
+$webhook = $client->createWebhook([
+    'url' => 'https://example.com/pdfgate-callback',
+    'eventTypes' => [
+        WebhookEventType::ENVELOPE_COMPLETED,
+        WebhookEventType::ENVELOPE_SENT,
+    ],
+    'description' => 'Production signing events',
+]);
+
+$fetched = $client->getWebhook($webhook->getId());
+$client->deleteWebhook($webhook->getId());
+```
+
+For complete operation examples (`flattenPdf`, `addFormFields`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `deleteDocument`, `createEnvelope`, `sendEnvelope`, `getEnvelope`, `createWebhook`, `getWebhook`, `deleteWebhook`), see [API](docs/guides/api.md).
 
 To download generated files, enable **Save files for one month** in PDFGate Dashboard settings.
 

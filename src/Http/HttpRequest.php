@@ -96,6 +96,19 @@ class HttpRequest
         return new self('GET', $url, $headers, null, null, $timeout);
     }
 
+    /**
+     * @param string $url Full request URL including optional query string.
+     * @param array<string,string> $headers HTTP headers map.
+     * @param int $timeout Total request timeout in seconds.
+     */
+    public static function makeDelete(
+        string $url,
+        array $headers = array(),
+        int $timeout = 60
+    ): self {
+        return new self('DELETE', $url, $headers, null, null, $timeout);
+    }
+
     public function getMethod(): string
     {
         return $this->method;

@@ -124,6 +124,26 @@ class ApiRequestHandler
     }
 
     /**
+     * Sends a DELETE request. Succeeds on any 2xx response (including 204 No Content).
+     *
+     * @param string $path Endpoint path.
+     */
+    public function delete(string $path): void
+    {
+        $url = (new UrlBuilder())
+            ->withDomain($this->baseUrl)
+            ->withPath($path)
+            ->build();
+        $request = HttpRequest::makeDelete(
+            $url,
+            $this->authHeaders(),
+            $this->resolveTimeoutForPath($path)
+        );
+
+        $this->send($request);
+    }
+
+    /**
      * Sends a GET request and returns the raw response body.
      *
      * @param string $path Endpoint path.

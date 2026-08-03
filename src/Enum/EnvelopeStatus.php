@@ -9,6 +9,7 @@ namespace PdfGate\Enum;
  */
 final class EnvelopeStatus
 {
+    public const DRAFT = 'draft';
     public const CREATED = 'created';
     public const IN_PROGRESS = 'in_progress';
     public const COMPLETED = 'completed';

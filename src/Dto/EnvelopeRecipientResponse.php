@@ -29,6 +29,12 @@ class EnvelopeRecipientResponse
     /** @var list<EnvelopeFieldResponse> */
     private $fields;
 
+    /** @var string|null */
+    private $signingLink;
+
+    /** @var string|null */
+    private $previewLink;
+
     /**
      * @param list<EnvelopeFieldResponse> $fields
      * @param string $status One of the DocumentRecipientStatus constants.
@@ -38,13 +44,17 @@ class EnvelopeRecipientResponse
         string $status,
         ?DateTimeImmutable $signedAt,
         ?DateTimeImmutable $viewedAt,
-        array $fields
+        array $fields,
+        ?string $signingLink = null,
+        ?string $previewLink = null
     ) {
         $this->email = $email;
         $this->status = $status;
         $this->signedAt = $signedAt;
         $this->viewedAt = $viewedAt;
         $this->fields = $fields;
+        $this->signingLink = $signingLink;
+        $this->previewLink = $previewLink;
     }
 
     /**
@@ -78,7 +88,13 @@ class EnvelopeRecipientResponse
             (string) $payload['status'],
             self::parseOptionalDate($payload, 'signedAt', 'envelope recipient response'),
             self::parseOptionalDate($payload, 'viewedAt', 'envelope recipient response'),
-            $fields
+            $fields,
+            array_key_exists('signingLink', $payload) && $payload['signingLink'] !== null
+                ? (string) $payload['signingLink']
+                : null,
+            array_key_exists('previewLink', $payload) && $payload['previewLink'] !== null
+                ? (string) $payload['previewLink']
+                : null
         );
     }
 
@@ -111,6 +127,22 @@ class EnvelopeRecipientResponse
     public function getFields(): array
     {
         return $this->fields;
+    }
+
+    /**
+     * Link the recipient uses to sign. Present while the recipient still needs to sign.
+     */
+    public function getSigningLink(): ?string
+    {
+        return $this->signingLink;
+    }
+
+    /**
+     * Link to preview the signed document. Present once the recipient has signed.
+     */
+    public function getPreviewLink(): ?string
+    {
+        return $this->previewLink;
     }
 
     /**

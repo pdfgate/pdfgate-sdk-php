@@ -63,8 +63,47 @@ namespace PdfGate\Type;
  * }
  * @phpstan-type FlattenPdfRequestPayload array{
  *   documentId: string,
+ *   fieldNames?: list<string>,
  *   preSignedUrlExpiresIn?: int,
  *   metadata?: array<string,mixed>
+ * }
+ * @phpstan-type FieldOverridePayload array{
+ *   options?: list<string>,
+ *   height?: int,
+ *   width?: int,
+ *   role?: string,
+ *   fontSize?: float|int,
+ *   autoFill?: bool,
+ *   optional?: bool,
+ *   description?: string
+ * }
+ * @phpstan-type ManualFormFieldPayload array{
+ *   name: string,
+ *   type: string,
+ *   page: int,
+ *   height: int,
+ *   width: int,
+ *   x: float|int,
+ *   y: float|int,
+ *   value?: string,
+ *   options?: list<string>,
+ *   role?: string,
+ *   fontSize?: float|int,
+ *   autoFill?: bool,
+ *   optional?: bool,
+ *   description?: string
+ * }
+ * @phpstan-type AddFormFieldsRequestPayload array{
+ *   documentId: string,
+ *   fieldOverrides?: array<string,FieldOverridePayload>,
+ *   fields?: list<ManualFormFieldPayload>,
+ *   preSignedUrlExpiresIn?: int,
+ *   metadata?: array<string,mixed>
+ * }
+ * @phpstan-type CreateWebhookRequestPayload array{
+ *   url: string,
+ *   eventTypes: list<string>,
+ *   description?: string
  * }
  * @phpstan-type CompressPdfRequestPayload array{
  *   documentId: string,
@@ -114,7 +153,9 @@ namespace PdfGate\Type;
  * @phpstan-type EnvelopeRecipientPayload array{
  *   email: string,
  *   name: string,
- *   role?: string
+ *   role?: string,
+ *   reminderIntervalDays?: int,
+ *   reminderAttempts?: int
  * }
  * @phpstan-type EnvelopeDocumentPayload array{
  *   sourceDocumentId: string,
