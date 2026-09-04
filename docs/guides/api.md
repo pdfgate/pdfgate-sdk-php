@@ -54,7 +54,7 @@ $envelope = $client->createEnvelope([
 
 ## Send Envelope
 
-`sendEnvelope()` emails each recipient a secure signing link. Links expire after 30 days and recipients must complete OTP verification before entering the signing flow.
+`sendEnvelope()` emails each recipient a secure signing link. Links stay valid until the envelope expires (30 days after creation by default, configurable with `expiresInDays` or the account's signing settings) and recipients must complete OTP verification before entering the signing flow.
 
 ```php
 $sentEnvelope = $client->sendEnvelope('69c0fa44f83ca6a7015f1c8c');
@@ -66,6 +66,22 @@ $sentEnvelope = $client->sendEnvelope('69c0fa44f83ca6a7015f1c8c');
 
 ```php
 $envelope = $client->getEnvelope('69c0fa44f83ca6a7015f1c8c');
+```
+
+## Void Envelope
+
+`voidEnvelope()` cancels an envelope in `created` or `in_progress` status. Recipients who have not signed are notified by email and their signing links stop working; documents already signed by all recipients are not affected. The optional reason is visible to recipients.
+
+```php
+$voided = $client->voidEnvelope('69c0fa44f83ca6a7015f1c8c', 'Contract terms changed');
+```
+
+## Delete Envelope
+
+`deleteEnvelope()` permanently deletes an envelope and the files it produced (signed documents and audit logs). Recipient data is anonymized and recipients lose access; source documents are not deleted. Only envelopes in `draft`, `completed`, `expired`, or `voided` status can be deleted — void an active envelope first.
+
+```php
+$client->deleteEnvelope('69c0fa44f83ca6a7015f1c8c');
 ```
 
 ## Flatten PDF

@@ -14,6 +14,7 @@ final class EnvelopeStatus
     public const IN_PROGRESS = 'in_progress';
     public const COMPLETED = 'completed';
     public const EXPIRED = 'expired';
+    public const VOIDED = 'voided';
 
     private function __construct()
     {

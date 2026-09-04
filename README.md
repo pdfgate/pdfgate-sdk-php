@@ -123,6 +123,28 @@ if ($envelope->getStatus() === EnvelopeStatus::IN_PROGRESS) {
 }
 ```
 
+### Void Envelope
+
+Cancel an envelope in `created` or `in_progress` status. Recipients who have not signed are notified by email and their signing links stop working; documents already signed by all recipients are not affected. The optional reason is visible to recipients.
+
+```php
+use PdfGate\Enum\EnvelopeStatus;
+
+$voided = $client->voidEnvelope('69c0fa44f83ca6a7015f1c8c', 'Contract terms changed');
+
+if ($voided->getStatus() === EnvelopeStatus::VOIDED) {
+    echo 'Envelope has been voided.';
+}
+```
+
+### Delete Envelope
+
+Permanently delete an envelope and the files it produced (signed documents and audit logs). Recipient data is anonymized and recipients lose access; source documents are not deleted. Only envelopes in `draft`, `completed`, `expired`, or `voided` status can be deleted — void an active envelope first.
+
+```php
+$client->deleteEnvelope('69c0fa44f83ca6a7015f1c8c');
+```
+
 ### Download File
 
 ```php

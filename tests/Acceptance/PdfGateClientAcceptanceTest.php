@@ -297,6 +297,58 @@ HTML;
         );
     }
 
+    public function testVoidAndDeleteEnvelopeCompletesLifecycle(): void
+    {
+        // The sandbox allows max 2 concurrent requests on the envelope
+        // endpoint; pause so the preceding envelope tests drain first.
+        sleep(3);
+
+        // Own envelope: voiding a "created" (never sent) envelope sends no
+        // recipient emails, so this is safe to run repeatedly.
+        $envelope = self::$client->createEnvelope(array(
+            'requesterName' => 'Acceptance Suite',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => self::$envelopeSourceDocumentId,
+                    'name' => 'Void Delete Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                        ),
+                    ),
+                ),
+            ),
+            'expiresInDays' => 10,
+        ));
+
+        self::assertNotNull($envelope->getExpiresAt());
+
+        $voided = self::$client->voidEnvelope($envelope->getId(), 'Acceptance test void');
+
+        self::assertSame('voided', $voided->getStatus());
+        self::assertNotNull($voided->getVoidedAt());
+        self::assertSame('Acceptance test void', $voided->getVoidReason());
+
+        try {
+            self::$client->voidEnvelope($envelope->getId());
+            self::fail('Expected voiding an already voided envelope to throw.');
+        } catch (ApiException $exception) {
+            self::assertSame(400, $exception->getStatusCode());
+        }
+
+        self::$client->deleteEnvelope($envelope->getId());
+
+        try {
+            self::$client->getEnvelope($envelope->getId());
+            self::fail('Expected fetching a deleted envelope to throw.');
+        } catch (ApiException $exception) {
+            self::assertSame(404, $exception->getStatusCode());
+        }
+
+        sleep(3);
+    }
+
     public function testGetEnvelopeReturnsEnvelopeMetadata(): void
     {
         $envelope = self::$client->createEnvelope(array(
