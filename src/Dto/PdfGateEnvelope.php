@@ -35,6 +35,15 @@ class PdfGateEnvelope
     /** @var array<string,mixed>|null */
     private $metadata;
 
+    /** @var DateTimeImmutable|null When the envelope will expire if it is not completed. */
+    private $expiresAt;
+
+    /** @var DateTimeImmutable|null */
+    private $voidedAt;
+
+    /** @var string|null */
+    private $voidReason;
+
     /**
      * @param list<EnvelopeDocumentResponse> $documents
      * @param array<string,mixed>|null $metadata
@@ -47,7 +56,10 @@ class PdfGateEnvelope
         DateTimeImmutable $createdAt,
         ?DateTimeImmutable $completedAt = null,
         ?DateTimeImmutable $expiredAt = null,
-        ?array $metadata = null
+        ?array $metadata = null,
+        ?DateTimeImmutable $expiresAt = null,
+        ?DateTimeImmutable $voidedAt = null,
+        ?string $voidReason = null
     ) {
         $this->id = $id;
         $this->status = $status;
@@ -56,6 +68,9 @@ class PdfGateEnvelope
         $this->completedAt = $completedAt;
         $this->expiredAt = $expiredAt;
         $this->metadata = $metadata;
+        $this->expiresAt = $expiresAt;
+        $this->voidedAt = $voidedAt;
+        $this->voidReason = $voidReason;
     }
 
     /**
@@ -95,7 +110,12 @@ class PdfGateEnvelope
             self::parseRequiredDate($payload, 'createdAt'),
             self::parseOptionalDate($payload, 'completedAt'),
             self::parseOptionalDate($payload, 'expiredAt'),
-            array_key_exists('metadata', $payload) ? $payload['metadata'] : null
+            array_key_exists('metadata', $payload) ? $payload['metadata'] : null,
+            self::parseOptionalDate($payload, 'expiresAt'),
+            self::parseOptionalDate($payload, 'voidedAt'),
+            array_key_exists('voidReason', $payload) && $payload['voidReason'] !== null
+                ? (string) $payload['voidReason']
+                : null
         );
     }
 
@@ -141,6 +161,24 @@ class PdfGateEnvelope
     public function getMetadata(): ?array
     {
         return $this->metadata;
+    }
+
+    /**
+     * When the envelope will expire if it is not completed.
+     */
+    public function getExpiresAt(): ?DateTimeImmutable
+    {
+        return $this->expiresAt;
+    }
+
+    public function getVoidedAt(): ?DateTimeImmutable
+    {
+        return $this->voidedAt;
+    }
+
+    public function getVoidReason(): ?string
+    {
+        return $this->voidReason;
     }
 
     /**

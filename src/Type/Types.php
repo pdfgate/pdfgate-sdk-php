@@ -165,7 +165,8 @@ namespace PdfGate\Type;
  * @phpstan-type CreateEnvelopeRequestPayload array{
  *   documents: list<EnvelopeDocumentPayload>,
  *   requesterName: string,
- *   metadata?: array<string,mixed>
+ *   metadata?: array<string,mixed>,
+ *   expiresInDays?: int
  * }
  */
 interface Types

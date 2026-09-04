@@ -611,6 +611,84 @@ final class PdfGateClientTest extends TestCase
         $client->sendEnvelope('   ');
     }
 
+    public function testVoidEnvelopeSendsReasonAndReturnsTypedEnvelopeResponse(): void
+    {
+        $body = json_encode(array(
+            'id' => '69c0fa44f83ca6a7015f1c8c',
+            'status' => 'voided',
+            'documents' => array(),
+            'createdAt' => '2024-02-13T15:56:12.607Z',
+            'voidedAt' => '2024-02-20T09:12:45.101Z',
+            'voidReason' => 'Contract terms changed',
+        ));
+        $transport = new RecordingTransport(new HttpResponse(201, (string) $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->voidEnvelope('69c0fa44f83ca6a7015f1c8c', 'Contract terms changed');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('/envelope/69c0fa44f83ca6a7015f1c8c/void', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame(array('reason' => 'Contract terms changed'), $request->getJsonBody());
+        self::assertSame(EnvelopeStatus::VOIDED, $response->getStatus());
+        self::assertSame('Contract terms changed', $response->getVoidReason());
+        self::assertNotNull($response->getVoidedAt());
+    }
+
+    public function testVoidEnvelopeSendsEmptyBodyWithoutReason(): void
+    {
+        $body = json_encode(array(
+            'id' => '69c0fa44f83ca6a7015f1c8c',
+            'status' => 'voided',
+            'documents' => array(),
+            'createdAt' => '2024-02-13T15:56:12.607Z',
+        ));
+        $transport = new RecordingTransport(new HttpResponse(201, (string) $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->voidEnvelope('69c0fa44f83ca6a7015f1c8c');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame(array(), $request->getJsonBody());
+    }
+
+    public function testVoidEnvelopeRejectsEmptyEnvelopeId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, '{}'));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Envelope ID cannot be empty.');
+
+        $client->voidEnvelope('   ');
+    }
+
+    public function testDeleteEnvelopeUsesDeleteMethodOnEnvelopePath(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, ''));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->deleteEnvelope('69c0fa44f83ca6a7015f1c8c');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('DELETE', $request->getMethod());
+        self::assertSame('/envelope/69c0fa44f83ca6a7015f1c8c', parse_url($request->getUrl(), PHP_URL_PATH));
+    }
+
+    public function testDeleteEnvelopeRejectsEmptyEnvelopeId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, ''));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Envelope ID cannot be empty.');
+
+        $client->deleteEnvelope('');
+    }
+
     public function testGetEnvelopeUsesGetEndpointAndReturnsTypedEnvelopeResponse(): void
     {
         $transport = new RecordingTransport(new HttpResponse(200, $this->successfulSendEnvelopeResponseBody()));

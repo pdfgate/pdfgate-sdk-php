@@ -280,6 +280,58 @@ class PdfGateClient
     }
 
     /**
+     * Voids (cancels) an envelope in created or in_progress status.
+     *
+     * Recipients who have not signed yet are notified by email and their
+     * signing links stop working; documents already signed by all recipients
+     * are not affected. The optional reason (max 500 characters) is visible to
+     * recipients: it is included in the cancellation email. This action cannot
+     * be undone.
+     *
+     * @param string $envelopeId Existing envelope ID.
+     * @param string|null $reason Optional reason, visible to recipients.
+     * @return PdfGateEnvelope
+     */
+    public function voidEnvelope(string $envelopeId, ?string $reason = null): PdfGateEnvelope
+    {
+        if (trim($envelopeId) === '') {
+            throw new InvalidArgumentException('Envelope ID cannot be empty.');
+        }
+
+        $body = array();
+        if ($reason !== null && trim($reason) !== '') {
+            $body['reason'] = $reason;
+        }
+
+        $response = $this->requestHandler->postJson(
+            '/envelope/' . rawurlencode($envelopeId) . '/void',
+            $body
+        );
+
+        return $this->buildEnvelopeResponse($response);
+    }
+
+    /**
+     * Permanently deletes an envelope and the files it produced.
+     *
+     * The signed documents and audit logs are removed from storage, recipient
+     * data is anonymized, and recipients lose access. Source documents are not
+     * deleted. Only envelopes in draft, completed, expired, or voided status
+     * can be deleted; void an active envelope first. This action cannot be
+     * undone.
+     *
+     * @param string $envelopeId Existing envelope ID.
+     */
+    public function deleteEnvelope(string $envelopeId): void
+    {
+        if (trim($envelopeId) === '') {
+            throw new InvalidArgumentException('Envelope ID cannot be empty.');
+        }
+
+        $this->requestHandler->delete('/envelope/' . rawurlencode($envelopeId));
+    }
+
+    /**
      * Retrieves a generated PDF file as a readable stream resource.
      *
      * @param string $documentId Generated document identifier.

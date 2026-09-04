@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `voidEnvelope()` to cancel an envelope in `created` or `in_progress` status, with an optional recipient-visible reason.
+- `deleteEnvelope()` to permanently delete an envelope and the files it produced.
+- `expiresInDays` on the create envelope payload to control envelope and signing link expiration (min 1, max 90 days).
+- `getExpiresAt()`, `getVoidedAt()` and `getVoidReason()` on `PdfGateEnvelope`.
+- `VOIDED` constants on `EnvelopeStatus`, `EnvelopeDocumentStatus` and `DocumentRecipientStatus`.
+- `ENVELOPE_VOIDED`, `ENVELOPE_DELETED` and `ENVELOPE_RECIPIENT_SIGNED` webhook event types.
+
 ## [1.0.0] - 2026-08-03
 
 ### Added
