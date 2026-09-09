@@ -84,6 +84,21 @@ class HttpRequest
     }
 
     /**
+     * @param string $url Full request URL without query string.
+     * @param array<string,string> $headers HTTP headers map.
+     * @param array<string,mixed>|null $jsonBody JSON request body.
+     * @param int $timeout Total request timeout in seconds.
+     */
+    public static function makePatchJson(
+        string $url,
+        array $headers = array(),
+        ?array $jsonBody = null,
+        int $timeout = 60
+    ): self {
+        return new self('PATCH', $url, $headers, $jsonBody, null, $timeout);
+    }
+
+    /**
      * @param string $url Full request URL including optional query string.
      * @param array<string,string> $headers HTTP headers map.
      * @param int $timeout Total request timeout in seconds.

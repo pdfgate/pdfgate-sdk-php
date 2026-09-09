@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `getExpiresAt()`, `getVoidedAt()` and `getVoidReason()` on `PdfGateEnvelope`.
 - `VOIDED` constants on `EnvelopeStatus`, `EnvelopeDocumentStatus` and `DocumentRecipientStatus`.
 - `ENVELOPE_VOIDED`, `ENVELOPE_DELETED` and `ENVELOPE_RECIPIENT_SIGNED` webhook event types.
+- `createEmbedLink()` to create a short-lived signing link for an embedded recipient, plus the `EmbedLinkResponse` DTO.
+- Recipient directory: `createRecipient()`, `listRecipients()`, `getRecipient()`, `updateRecipient()`, plus the `PdfGateRecipient` DTO.
+- `recipientId` and `embedded` on envelope creation recipients; recipient `email`/`name` are now optional when `recipientId` is provided.
+- `getRecipientId()` on `EnvelopeRecipientResponse`.
 
 ## [1.0.0] - 2026-08-03
 

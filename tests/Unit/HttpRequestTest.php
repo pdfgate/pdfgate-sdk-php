@@ -43,6 +43,23 @@ final class HttpRequestTest extends TestCase
         self::assertSame(180, $request->getTimeout());
     }
 
+    public function testMakePatchJsonSetsJsonBodyOnly(): void
+    {
+        $request = HttpRequest::makePatchJson(
+            'https://api.pdfgate.com/recipient/rcp_123',
+            array('Authorization' => 'Bearer x'),
+            array('name' => 'Anna Smith'),
+            60
+        );
+
+        self::assertSame('PATCH', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/recipient/rcp_123', $request->getUrl());
+        self::assertSame(array('Authorization' => 'Bearer x'), $request->getHeaders());
+        self::assertSame(array('name' => 'Anna Smith'), $request->getJsonBody());
+        self::assertNull($request->getMultipartBody());
+        self::assertSame(60, $request->getTimeout());
+    }
+
     public function testMakePostMultipartSetsMultipartBodyOnly(): void
     {
         $request = HttpRequest::makePostMultipart(

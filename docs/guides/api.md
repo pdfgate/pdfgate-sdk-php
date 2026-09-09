@@ -31,7 +31,7 @@ $client->uploadFile([
 
 ## Create Envelope
 
-`createEnvelope()` sends JSON with nested envelope documents and recipients. Optional fields like `metadata` and recipient `role` are omitted automatically when set to `null`.
+`createEnvelope()` sends JSON with nested envelope documents and recipients. Optional fields like `metadata` and recipient `role` are omitted automatically when set to `null`. Each recipient is given either as `email` and `name` or as the `recipientId` of a stored recipient (see [Create Recipient](#create-recipient)). Recipients marked `embedded` receive no email and get their signing links via `createEmbedLink()` after sending.
 
 ```php
 $envelope = $client->createEnvelope([
@@ -54,7 +54,7 @@ $envelope = $client->createEnvelope([
 
 ## Send Envelope
 
-`sendEnvelope()` emails each recipient a secure signing link. Links stay valid until the envelope expires (30 days after creation by default, configurable with `expiresInDays` or the account's signing settings) and recipients must complete OTP verification before entering the signing flow.
+`sendEnvelope()` emails each recipient a secure signing link. Links stay valid until the envelope expires (30 days after creation by default, configurable with `expiresInDays` or the account's signing settings) and recipients must complete OTP verification before entering the signing flow. Embedded recipients receive no email; create their signing links with `createEmbedLink()` after sending.
 
 ```php
 $sentEnvelope = $client->sendEnvelope('69c0fa44f83ca6a7015f1c8c');
@@ -82,6 +82,58 @@ $voided = $client->voidEnvelope('69c0fa44f83ca6a7015f1c8c', 'Contract terms chan
 
 ```php
 $client->deleteEnvelope('69c0fa44f83ca6a7015f1c8c');
+```
+
+## Create Embed Link
+
+`createEmbedLink()` creates a short-lived signing link for an embedded recipient; render the returned URL in an iframe inside your application. The envelope must be in `in_progress` status and the link expires after 10 minutes, so create it when the signer is ready (one link per signing session). When the session ends the iframe redirects to `returnUrl` with `event` (`signing_complete`, `voided`, `expired` or `not_found`), `envelopeId`, `documentId` and `recipientId` appended as query parameters; existing `returnUrl` query parameters are preserved.
+
+```php
+$embedLink = $client->createEmbedLink('69c0fa44f83ca6a7015f1c8c', [
+    'documentId' => '6642381c5c61',
+    'recipientId' => 'rcp_1a2b3c4d5e6f',
+    'returnUrl' => 'https://example.com/signed',
+]);
+
+echo $embedLink->getUrl();
+```
+
+## Create Recipient
+
+`createRecipient()` stores a recipient so envelopes can reference them by `recipientId`. The email is stored lowercased and cannot be changed later. Emails are not unique; every call creates a new recipient, so list existing recipients first when reuse is intended.
+
+```php
+$recipient = $client->createRecipient([
+    'email' => 'anna@example.com',
+    'name' => 'Anna Smith',
+    'metadata' => ['customerId' => 'cus_123'],
+]);
+```
+
+## List Recipients
+
+`listRecipients()` returns the stored recipients with the given email (case-insensitive), oldest first.
+
+```php
+$recipients = $client->listRecipients('anna@example.com');
+```
+
+## Get Recipient
+
+`getRecipient()` retrieves a stored recipient by ID.
+
+```php
+$recipient = $client->getRecipient('rcp_1a2b3c4d5e6f');
+```
+
+## Update Recipient
+
+`updateRecipient()` updates a stored recipient's name or metadata. The email cannot be changed. Existing envelopes are not affected; they keep the recipient name they were created with.
+
+```php
+$updated = $client->updateRecipient('rcp_1a2b3c4d5e6f', [
+    'name' => 'Anna Jones',
+]);
 ```
 
 ## Flatten PDF

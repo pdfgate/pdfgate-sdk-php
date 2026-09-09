@@ -35,6 +35,12 @@ class EnvelopeRecipientResponse
     /** @var string|null */
     private $previewLink;
 
+    /** @var string|null */
+    private $recipientId;
+
+    /** @var bool Whether the recipient signs through embedded signing. */
+    private $embedded;
+
     /**
      * @param list<EnvelopeFieldResponse> $fields
      * @param string $status One of the DocumentRecipientStatus constants.
@@ -46,7 +52,9 @@ class EnvelopeRecipientResponse
         ?DateTimeImmutable $viewedAt,
         array $fields,
         ?string $signingLink = null,
-        ?string $previewLink = null
+        ?string $previewLink = null,
+        ?string $recipientId = null,
+        bool $embedded = false
     ) {
         $this->email = $email;
         $this->status = $status;
@@ -55,6 +63,8 @@ class EnvelopeRecipientResponse
         $this->fields = $fields;
         $this->signingLink = $signingLink;
         $this->previewLink = $previewLink;
+        $this->recipientId = $recipientId;
+        $this->embedded = $embedded;
     }
 
     /**
@@ -94,7 +104,11 @@ class EnvelopeRecipientResponse
                 : null,
             array_key_exists('previewLink', $payload) && $payload['previewLink'] !== null
                 ? (string) $payload['previewLink']
-                : null
+                : null,
+            array_key_exists('recipientId', $payload) && $payload['recipientId'] !== null
+                ? (string) $payload['recipientId']
+                : null,
+            array_key_exists('embedded', $payload) ? (bool) $payload['embedded'] : false
         );
     }
 
@@ -143,6 +157,24 @@ class EnvelopeRecipientResponse
     public function getPreviewLink(): ?string
     {
         return $this->previewLink;
+    }
+
+    /**
+     * ID of the stored recipient. Present when the recipient references an
+     * entry in the recipient directory.
+     */
+    /**
+     * Whether the recipient signs through embedded signing. Embedded
+     * recipients receive no emails and have no signing link.
+     */
+    public function isEmbedded(): bool
+    {
+        return $this->embedded;
+    }
+
+    public function getRecipientId(): ?string
+    {
+        return $this->recipientId;
     }
 
     /**

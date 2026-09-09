@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace PdfGate;
 
+use PdfGate\Dto\EmbedLinkResponse;
 use PdfGate\Dto\PdfGateEnvelope;
 use PdfGate\Dto\PdfGateDocumentMetadata;
+use PdfGate\Dto\PdfGateRecipient;
 use PdfGate\Dto\WebhookResponse;
 use PdfGate\Exception\InvalidArgumentException;
 use PdfGate\Exception\InvalidConfigurationException;
@@ -26,6 +28,9 @@ use PdfGate\Http\HttpTransportInterface;
  * @phpstan-import-type ExtractPdfFormDataRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type GetDocumentQueryPayload from \PdfGate\Type\Types
  * @phpstan-import-type CreateEnvelopeRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type CreateEmbedLinkRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type CreateRecipientRequestPayload from \PdfGate\Type\Types
+ * @phpstan-import-type UpdateRecipientRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type AddFormFieldsRequestPayload from \PdfGate\Type\Types
  * @phpstan-import-type CreateWebhookRequestPayload from \PdfGate\Type\Types
  */
@@ -230,6 +235,10 @@ class PdfGateClient
     /**
      * Creates a signing envelope from existing source documents.
      *
+     * Each recipient is given either as email and name or as the recipientId
+     * of a stored recipient. Recipients marked embedded sign inside your own
+     * application via createEmbedLink() and receive no emails from PDFGate.
+     *
      * @param CreateEnvelopeRequestPayload $request Create envelope request payload.
      * @return PdfGateEnvelope
      */
@@ -242,6 +251,9 @@ class PdfGateClient
 
     /**
      * Sends an existing envelope to all configured recipients.
+     *
+     * Embedded recipients receive no email; create their signing links with
+     * createEmbedLink() after sending.
      *
      * @param string $envelopeId Existing envelope ID.
      * @return PdfGateEnvelope
@@ -329,6 +341,128 @@ class PdfGateClient
         }
 
         $this->requestHandler->delete('/envelope/' . rawurlencode($envelopeId));
+    }
+
+    /**
+     * Creates a short-lived signing link for an embedded recipient.
+     *
+     * Render the returned URL in an iframe inside your application. The
+     * envelope must be in in_progress status and the link expires after 10
+     * minutes, so create it when the signer is ready (one link per signing
+     * session). When the session ends the iframe redirects to returnUrl with
+     * event (signing_complete, voided, expired or not_found), envelopeId,
+     * documentId and recipientId appended as query parameters; existing
+     * returnUrl query parameters are preserved.
+     *
+     * @param string $envelopeId Existing envelope ID.
+     * @param CreateEmbedLinkRequestPayload $request Create embed link request payload.
+     * @return EmbedLinkResponse
+     */
+    public function createEmbedLink(string $envelopeId, array $request): EmbedLinkResponse
+    {
+        if (trim($envelopeId) === '') {
+            throw new InvalidArgumentException('Envelope ID cannot be empty.');
+        }
+
+        $response = $this->requestHandler->postJson(
+            '/envelope/' . rawurlencode($envelopeId) . '/embed-link',
+            $request
+        );
+
+        return EmbedLinkResponse::fromArray($response);
+    }
+
+    /**
+     * Stores a recipient so envelopes can reference them by recipientId.
+     *
+     * The email is stored lowercased and cannot be changed later. Emails are
+     * not unique; every call creates a new recipient, so list existing
+     * recipients first when reuse is intended.
+     *
+     * @param CreateRecipientRequestPayload $request Create recipient request payload.
+     * @return PdfGateRecipient
+     */
+    public function createRecipient(array $request): PdfGateRecipient
+    {
+        $response = $this->requestHandler->postJson('/recipient', $request);
+
+        return PdfGateRecipient::fromArray($response);
+    }
+
+    /**
+     * Lists stored recipients with the given email, oldest first.
+     *
+     * @param string $email Email to look up (case-insensitive).
+     * @return list<PdfGateRecipient>
+     */
+    public function listRecipients(string $email): array
+    {
+        if (trim($email) === '') {
+            throw new InvalidArgumentException('Email cannot be empty.');
+        }
+
+        $response = $this->requestHandler->getJson(
+            '/recipients',
+            array('email' => $email)
+        );
+
+        if (!array_key_exists('recipients', $response) || !is_array($response['recipients'])) {
+            throw new TransportException('Expected "recipients" to be an array in list recipients response.');
+        }
+
+        $recipients = array();
+        foreach ($response['recipients'] as $recipientPayload) {
+            if (!is_array($recipientPayload)) {
+                throw new TransportException('Expected each recipient response to be an object.');
+            }
+
+            $recipients[] = PdfGateRecipient::fromArray($recipientPayload);
+        }
+
+        return $recipients;
+    }
+
+    /**
+     * Retrieves a stored recipient by ID.
+     *
+     * @param string $recipientId Existing recipient ID.
+     * @return PdfGateRecipient
+     */
+    public function getRecipient(string $recipientId): PdfGateRecipient
+    {
+        if (trim($recipientId) === '') {
+            throw new InvalidArgumentException('Recipient ID cannot be empty.');
+        }
+
+        $response = $this->requestHandler->getJson(
+            '/recipient/' . rawurlencode($recipientId)
+        );
+
+        return PdfGateRecipient::fromArray($response);
+    }
+
+    /**
+     * Updates a stored recipient's name or metadata.
+     *
+     * The email cannot be changed. Existing envelopes are not affected; they
+     * keep the recipient name they were created with.
+     *
+     * @param string $recipientId Existing recipient ID.
+     * @param UpdateRecipientRequestPayload $request Update recipient request payload.
+     * @return PdfGateRecipient
+     */
+    public function updateRecipient(string $recipientId, array $request): PdfGateRecipient
+    {
+        if (trim($recipientId) === '') {
+            throw new InvalidArgumentException('Recipient ID cannot be empty.');
+        }
+
+        $response = $this->requestHandler->patchJson(
+            '/recipient/' . rawurlencode($recipientId),
+            $request
+        );
+
+        return PdfGateRecipient::fromArray($response);
     }
 
     /**

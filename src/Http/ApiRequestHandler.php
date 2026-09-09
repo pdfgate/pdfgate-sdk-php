@@ -98,6 +98,32 @@ class ApiRequestHandler
     }
 
     /**
+     * Sends a PATCH request and parses a JSON response.
+     *
+     * @param string $path Endpoint path.
+     * @param array<string,mixed> $payload Request body payload.
+     * @return array<string,mixed>
+     */
+    public function patchJson(string $path, array $payload): array
+    {
+        $payload = $this->normalizeArray($payload);
+        $url = (new UrlBuilder())
+            ->withDomain($this->baseUrl)
+            ->withPath($path)
+            ->build();
+        $request = HttpRequest::makePatchJson(
+            $url,
+            $this->authHeaders(),
+            $payload,
+            $this->resolveTimeoutForPath($path)
+        );
+
+        $response = $this->send($request);
+
+        return $this->decodeJsonResponse($response->body);
+    }
+
+    /**
      * Sends a GET request and parses a JSON response.
      *
      * @param string $path Endpoint path.
