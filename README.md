@@ -10,6 +10,8 @@ PDFGate lets you generate, process, and secure PDFs via a simple API:
 - HTML or URL to PDF
 - Fillable forms and adding form fields
 - Create signing envelopes from source documents
+- Embedded signing inside your own application
+- Store and reuse recipients across envelopes
 - Flatten (all or specific fields), compress, watermark, protect PDFs
 - Extract PDF form data
 - Delete stored documents
@@ -73,6 +75,8 @@ $client->uploadFile([
 ```
 
 ### Create Envelope
+
+Each recipient is given either as `email` and `name` or as the `recipientId` of a stored recipient (see [Manage Recipients](#manage-recipients)). Recipients marked `embedded` receive no email and get their signing links via `createEmbedLink()` after sending (see [Embedded Signing](#embedded-signing)).
 
 ```php
 use PdfGate\Enum\EnvelopeStatus;
@@ -143,6 +147,69 @@ Permanently delete an envelope and the files it produced (signed documents and a
 
 ```php
 $client->deleteEnvelope('69c0fa44f83ca6a7015f1c8c');
+```
+
+### Embedded Signing
+
+Embedded recipients sign inside your own application through an embed link and receive no emails from PDFGate. Create the envelope with an `embedded` recipient, send it, then create an embed link and render the returned URL in an iframe.
+
+```php
+$envelope = $client->createEnvelope([
+    'requesterName' => 'John Doe',
+    'documents' => [
+        [
+            'sourceDocumentId' => '6642381c5c61',
+            'name' => 'Employment Agreement',
+            'recipients' => [
+                [
+                    'email' => 'anna@example.com',
+                    'name' => 'Anna Smith',
+                    'embedded' => true,
+                ],
+            ],
+        ],
+    ],
+]);
+
+$client->sendEnvelope($envelope->getId());
+```
+
+The envelope must be in `in_progress` status and the link expires after 10 minutes, so create it when the signer is ready — one link per signing session.
+
+```php
+$embedLink = $client->createEmbedLink($envelope->getId(), [
+    'documentId' => '6642381c5c61',
+    'recipientId' => 'rcp_1a2b3c4d5e6f',
+    'returnUrl' => 'https://example.com/signed',
+]);
+
+echo '<iframe src="' . htmlspecialchars($embedLink->getUrl()) . '"></iframe>';
+```
+
+When the session ends the iframe redirects to `returnUrl` with `event` (`signing_complete`, `voided`, `expired` or `not_found`), `envelopeId`, `documentId` and `recipientId` appended as query parameters; existing `returnUrl` query parameters are preserved.
+
+### Manage Recipients
+
+Store recipients once and reference them from envelopes by `recipientId`. Emails are not unique — every `createRecipient()` call creates a new recipient — so list existing recipients first when reuse is intended.
+
+```php
+// Email is stored lowercased and cannot be changed later.
+$recipient = $client->createRecipient([
+    'email' => 'anna@example.com',
+    'name' => 'Anna Smith',
+    'metadata' => ['customerId' => 'cus_123'],
+]);
+
+// Case-insensitive lookup, oldest first.
+$recipients = $client->listRecipients('anna@example.com');
+
+$fetched = $client->getRecipient($recipient->getId());
+
+// Updates do not affect existing envelopes; they keep the recipient
+// name they were created with.
+$updated = $client->updateRecipient($recipient->getId(), [
+    'name' => 'Anna Jones',
+]);
 ```
 
 ### Download File
@@ -216,7 +283,7 @@ $fetched = $client->getWebhook($webhook->getId());
 $client->deleteWebhook($webhook->getId());
 ```
 
-For complete operation examples (`flattenPdf`, `addFormFields`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `deleteDocument`, `createEnvelope`, `sendEnvelope`, `getEnvelope`, `createWebhook`, `getWebhook`, `deleteWebhook`), see [API](docs/guides/api.md).
+For complete operation examples (`flattenPdf`, `addFormFields`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `deleteDocument`, `createEnvelope`, `sendEnvelope`, `getEnvelope`, `createEmbedLink`, `createRecipient`, `listRecipients`, `getRecipient`, `updateRecipient`, `createWebhook`, `getWebhook`, `deleteWebhook`), see [API](docs/guides/api.md).
 
 To download generated files, enable **Save files for one month** in PDFGate Dashboard settings.
 

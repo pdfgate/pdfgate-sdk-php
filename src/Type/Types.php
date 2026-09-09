@@ -151,11 +151,13 @@ namespace PdfGate\Type;
  *   preSignedUrlExpiresIn?: int
  * }
  * @phpstan-type EnvelopeRecipientPayload array{
- *   email: string,
- *   name: string,
+ *   recipientId?: string,
+ *   email?: string,
+ *   name?: string,
  *   role?: string,
  *   reminderIntervalDays?: int,
- *   reminderAttempts?: int
+ *   reminderAttempts?: int,
+ *   embedded?: bool
  * }
  * @phpstan-type EnvelopeDocumentPayload array{
  *   sourceDocumentId: string,
@@ -167,6 +169,20 @@ namespace PdfGate\Type;
  *   requesterName: string,
  *   metadata?: array<string,mixed>,
  *   expiresInDays?: int
+ * }
+ * @phpstan-type CreateEmbedLinkRequestPayload array{
+ *   documentId: string,
+ *   recipientId: string,
+ *   returnUrl: string
+ * }
+ * @phpstan-type CreateRecipientRequestPayload array{
+ *   email: string,
+ *   name?: string,
+ *   metadata?: array<string,mixed>
+ * }
+ * @phpstan-type UpdateRecipientRequestPayload array{
+ *   name?: string,
+ *   metadata?: array<string,mixed>
  * }
  */
 interface Types

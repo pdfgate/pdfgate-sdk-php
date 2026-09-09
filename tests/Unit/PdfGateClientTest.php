@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace PdfGate\Tests\Unit;
 
+use PdfGate\Dto\EmbedLinkResponse;
 use PdfGate\Dto\PdfGateEnvelope;
 use PdfGate\Dto\PdfGateDocumentMetadata;
+use PdfGate\Dto\PdfGateRecipient;
 use PdfGate\Dto\WebhookResponse;
 use PdfGate\Enum\DocumentFieldType;
 use PdfGate\Enum\DocumentRecipientStatus;
@@ -524,6 +526,49 @@ final class PdfGateClientTest extends TestCase
         self::assertSame(3, $recipient['reminderAttempts']);
     }
 
+    public function testCreateEnvelopeForwardsRecipientIdAndEmbeddedFields(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulCreateEnvelopeResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->createEnvelope(array(
+            'requesterName' => 'John Doe',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => '6642381c5c61',
+                    'name' => 'Agreement',
+                    'recipients' => array(
+                        array(
+                            'recipientId' => 'rcp_123',
+                            'embedded' => true,
+                        ),
+                    ),
+                ),
+            ),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        $recipient = $request->getJsonBody()['documents'][0]['recipients'][0];
+        self::assertSame('rcp_123', $recipient['recipientId']);
+        self::assertSame(true, $recipient['embedded']);
+        self::assertArrayNotHasKey('email', $recipient);
+        self::assertArrayNotHasKey('name', $recipient);
+    }
+
+    public function testGetEnvelopeParsesRecipientRecipientId(): void
+    {
+        $body = '{"id":"env_1","status":"in_progress","createdAt":"2024-02-13T15:56:12.607Z","documents":[{"sourceDocumentId":"doc_1","status":"pending","recipients":[{"email":"a@example.com","status":"pending","recipientId":"rcp_123","fields":[]},{"email":"b@example.com","status":"pending","fields":[]}]}]}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $envelope = $client->getEnvelope('env_1');
+
+        $recipients = $envelope->getDocuments()[0]->getRecipients();
+        self::assertSame('rcp_123', $recipients[0]->getRecipientId());
+        self::assertNull($recipients[1]->getRecipientId());
+    }
+
     public function testGetEnvelopeParsesRecipientLinksAndFieldTimezoneFields(): void
     {
         $body = '{"id":"env_1","status":"in_progress","createdAt":"2024-02-13T15:56:12.607Z","documents":[{"sourceDocumentId":"doc_1","status":"pending","recipients":[{"email":"a@example.com","status":"pending","signingLink":"https://sign.example/abc","previewLink":"https://preview.example/abc","fields":[{"name":"signature-date","type":"datetime","timezone":"UTC","source":"user","userValue":"2026-01-01T10:00:00","userTimezone":"Europe/Athens"}]}]}]}';
@@ -687,6 +732,49 @@ final class PdfGateClientTest extends TestCase
         $this->expectExceptionMessage('Envelope ID cannot be empty.');
 
         $client->deleteEnvelope('');
+    }
+
+    public function testCreateEmbedLinkSendsBodyAndReturnsTypedEmbedLinkResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulEmbedLinkResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->createEmbedLink('69c0fa44f83ca6a7015f1c8c', array(
+            'documentId' => '69bd87a32da418e6c4d2azze',
+            'recipientId' => 'rcp_123',
+            'returnUrl' => 'https://example.com/signed?session=42',
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('/envelope/69c0fa44f83ca6a7015f1c8c/embed-link', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame(
+            array(
+                'documentId' => '69bd87a32da418e6c4d2azze',
+                'recipientId' => 'rcp_123',
+                'returnUrl' => 'https://example.com/signed?session=42',
+            ),
+            $request->getJsonBody()
+        );
+        self::assertInstanceOf(EmbedLinkResponse::class, $response);
+        self::assertSame('https://sign.pdfgate.com/embed/token', $response->getUrl());
+        self::assertSame('2024-02-13T16:06:12+00:00', $response->getExpiresAt()->format(DATE_ATOM));
+    }
+
+    public function testCreateEmbedLinkRejectsEmptyEnvelopeId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulEmbedLinkResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Envelope ID cannot be empty.');
+
+        $client->createEmbedLink('   ', array(
+            'documentId' => '69bd87a32da418e6c4d2azze',
+            'recipientId' => 'rcp_123',
+            'returnUrl' => 'https://example.com/signed',
+        ));
     }
 
     public function testGetEnvelopeUsesGetEndpointAndReturnsTypedEnvelopeResponse(): void
@@ -954,6 +1042,126 @@ final class PdfGateClientTest extends TestCase
         self::assertSame('/webhook/wh_123', parse_url($request->getUrl(), PHP_URL_PATH));
     }
 
+    public function testCreateRecipientSendsPayloadAndParsesResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulRecipientResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->createRecipient(array(
+            'email' => 'Anna@Example.com',
+            'name' => 'Anna Smith',
+            'metadata' => array('customerId' => 'cus_123'),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('/recipient', parse_url($request->getUrl(), PHP_URL_PATH));
+        $body = $request->getJsonBody();
+        self::assertSame('Anna@Example.com', $body['email']);
+        self::assertSame('Anna Smith', $body['name']);
+        self::assertSame(array('customerId' => 'cus_123'), $body['metadata']);
+
+        self::assertInstanceOf(PdfGateRecipient::class, $response);
+        self::assertSame('rcp_123', $response->getId());
+        self::assertSame('anna@example.com', $response->getEmail());
+        self::assertSame('Anna Smith', $response->getName());
+        self::assertSame(array('customerId' => 'cus_123'), $response->getMetadata());
+        self::assertNotNull($response->getCreatedAt());
+        self::assertNotNull($response->getUpdatedAt());
+        self::assertNull($response->getLastUsedAt());
+    }
+
+    public function testListRecipientsSendsEmailQueryAndParsesRecipients(): void
+    {
+        $body = '{"recipients":[' . $this->successfulRecipientResponseBody() . ',{"id":"rcp_456","email":"anna@example.com"}]}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->listRecipients('Anna@Example.com');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('/recipients', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('email=Anna%40Example.com', parse_url($request->getUrl(), PHP_URL_QUERY));
+
+        self::assertCount(2, $response);
+        self::assertSame('rcp_123', $response[0]->getId());
+        self::assertSame('rcp_456', $response[1]->getId());
+        self::assertNull($response[1]->getName());
+        self::assertNull($response[1]->getCreatedAt());
+    }
+
+    public function testListRecipientsRejectsEmptyEmail(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, '{"recipients":[]}'));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Email cannot be empty.');
+
+        $client->listRecipients('   ');
+    }
+
+    public function testGetRecipientUsesGetEndpoint(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulRecipientResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->getRecipient('rcp_123');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->getMethod());
+        self::assertSame('/recipient/rcp_123', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('rcp_123', $response->getId());
+    }
+
+    public function testGetRecipientRejectsEmptyRecipientId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulRecipientResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Recipient ID cannot be empty.');
+
+        $client->getRecipient('   ');
+    }
+
+    public function testUpdateRecipientSendsPatchWithBodyAndParsesResponse(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulRecipientResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->updateRecipient('rcp_123', array(
+            'name' => 'Anna Smith',
+            'metadata' => array('customerId' => 'cus_123'),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('PATCH', $request->getMethod());
+        self::assertSame('/recipient/rcp_123', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame(
+            array('name' => 'Anna Smith', 'metadata' => array('customerId' => 'cus_123')),
+            $request->getJsonBody()
+        );
+        self::assertInstanceOf(PdfGateRecipient::class, $response);
+        self::assertSame('rcp_123', $response->getId());
+    }
+
+    public function testUpdateRecipientRejectsEmptyRecipientId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulRecipientResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Recipient ID cannot be empty.');
+
+        $client->updateRecipient('', array('name' => 'Anna Smith'));
+    }
+
     private function successfulAddFormFieldsResponseBody(): string
     {
         return '{"id":"6642381c5c61","status":"completed","type":"document_fields_added","fileUrl":"https://api.pdfgate.com/file/open/token","size":1620006,"createdAt":"2024-02-13T15:56:12.607Z","derivedFrom":"doc_123"}';
@@ -1007,6 +1215,16 @@ final class PdfGateClientTest extends TestCase
     private function successfulCreateEnvelopeResponseBodyWithoutMetadata(): string
     {
         return '{"id":"69c0fa44f83ca6a7015f1c8c","status":"created","documents":[{"sourceDocumentId":"69bd87a32da418e6c4d2azze","recipients":[{"email":"anna@example.com","status":"pending","fields":[]}],"status":"pending"}],"createdAt":"2024-02-13T15:56:12.607Z"}';
+    }
+
+    private function successfulEmbedLinkResponseBody(): string
+    {
+        return '{"url":"https://sign.pdfgate.com/embed/token","expiresAt":"2024-02-13T16:06:12.607Z"}';
+    }
+
+    private function successfulRecipientResponseBody(): string
+    {
+        return '{"id":"rcp_123","email":"anna@example.com","name":"Anna Smith","metadata":{"customerId":"cus_123"},"createdAt":"2024-02-13T15:56:12.607Z","updatedAt":"2024-02-13T15:56:12.607Z"}';
     }
 
     private function successfulSendEnvelopeResponseBody(): string
