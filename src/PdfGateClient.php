@@ -239,6 +239,12 @@ class PdfGateClient
      * of a stored recipient. Recipients marked embedded sign inside your own
      * application via createEmbedLink() and receive no emails from PDFGate.
      *
+     * signingOrder is the signing order of the recipient, starting from 1.
+     * Recipients sign one after another in this order and a recipient is
+     * activated once everyone with a lower value has signed. Recipients with
+     * the same value can sign in parallel. Provide it for every recipient of a
+     * document or for none. Omitted, all recipients can sign immediately.
+     *
      * @param CreateEnvelopeRequestPayload $request Create envelope request payload.
      * @return PdfGateEnvelope
      */
@@ -253,7 +259,9 @@ class PdfGateClient
      * Sends an existing envelope to all configured recipients.
      *
      * Embedded recipients receive no email; create their signing links with
-     * createEmbedLink() after sending.
+     * createEmbedLink() after sending. On documents with a signingOrder only
+     * the first recipients are emailed; later recipients are activated as
+     * earlier ones sign.
      *
      * @param string $envelopeId Existing envelope ID.
      * @return PdfGateEnvelope
@@ -352,7 +360,10 @@ class PdfGateClient
      * session). When the session ends the iframe redirects to returnUrl with
      * event (signing_complete, voided, expired or not_found), envelopeId,
      * documentId and recipientId appended as query parameters; existing
-     * returnUrl query parameters are preserved.
+     * returnUrl query parameters are preserved. On documents with a
+     * signingOrder the link can only be created once it is the recipient's
+     * turn (the API returns an error before that); the
+     * envelope.recipient.activated webhook signals that moment.
      *
      * @param string $envelopeId Existing envelope ID.
      * @param CreateEmbedLinkRequestPayload $request Create embed link request payload.

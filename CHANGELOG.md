@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recipient directory: `createRecipient()`, `listRecipients()`, `getRecipient()`, `updateRecipient()`, plus the `PdfGateRecipient` DTO.
 - `recipientId` and `embedded` on envelope creation recipients; recipient `email`/`name` are now optional when `recipientId` is provided.
 - `getRecipientId()` on `EnvelopeRecipientResponse`.
+- `signingOrder` on envelope creation recipients to make recipients sign one after another.
+- `getSigningOrder()` and `getActivatedAt()` on `EnvelopeRecipientResponse`.
+- `ENVELOPE_RECIPIENT_ACTIVATED` webhook event type, fired when it becomes a recipient's turn to sign on a document with a signing order.
 
 ## [1.0.0] - 2026-08-03
 

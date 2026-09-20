@@ -41,6 +41,12 @@ class EnvelopeRecipientResponse
     /** @var bool Whether the recipient signs through embedded signing. */
     private $embedded;
 
+    /** @var int|null Signing order of the recipient, starting from 1. */
+    private $signingOrder;
+
+    /** @var DateTimeImmutable|null */
+    private $activatedAt;
+
     /**
      * @param list<EnvelopeFieldResponse> $fields
      * @param string $status One of the DocumentRecipientStatus constants.
@@ -54,7 +60,9 @@ class EnvelopeRecipientResponse
         ?string $signingLink = null,
         ?string $previewLink = null,
         ?string $recipientId = null,
-        bool $embedded = false
+        bool $embedded = false,
+        ?int $signingOrder = null,
+        ?DateTimeImmutable $activatedAt = null
     ) {
         $this->email = $email;
         $this->status = $status;
@@ -65,6 +73,8 @@ class EnvelopeRecipientResponse
         $this->previewLink = $previewLink;
         $this->recipientId = $recipientId;
         $this->embedded = $embedded;
+        $this->signingOrder = $signingOrder;
+        $this->activatedAt = $activatedAt;
     }
 
     /**
@@ -108,7 +118,11 @@ class EnvelopeRecipientResponse
             array_key_exists('recipientId', $payload) && $payload['recipientId'] !== null
                 ? (string) $payload['recipientId']
                 : null,
-            array_key_exists('embedded', $payload) ? (bool) $payload['embedded'] : false
+            array_key_exists('embedded', $payload) ? (bool) $payload['embedded'] : false,
+            array_key_exists('signingOrder', $payload) && $payload['signingOrder'] !== null
+                ? (int) $payload['signingOrder']
+                : null,
+            self::parseOptionalDate($payload, 'activatedAt', 'envelope recipient response')
         );
     }
 
@@ -175,6 +189,26 @@ class EnvelopeRecipientResponse
     public function getRecipientId(): ?string
     {
         return $this->recipientId;
+    }
+
+    /**
+     * Signing order of the recipient, starting from 1. Recipients sign one
+     * after another in this order and a recipient is activated once everyone
+     * with a lower value has signed. Recipients with the same value can sign
+     * in parallel. Null when the document has no signing order.
+     */
+    public function getSigningOrder(): ?int
+    {
+        return $this->signingOrder;
+    }
+
+    /**
+     * The time it became the recipient's turn to sign. Null until the
+     * recipient is activated.
+     */
+    public function getActivatedAt(): ?DateTimeImmutable
+    {
+        return $this->activatedAt;
     }
 
     /**
