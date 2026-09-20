@@ -556,6 +556,58 @@ final class PdfGateClientTest extends TestCase
         self::assertArrayNotHasKey('name', $recipient);
     }
 
+    public function testCreateEnvelopeForwardsRecipientSigningOrder(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulCreateEnvelopeResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->createEnvelope(array(
+            'requesterName' => 'John Doe',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => '6642381c5c61',
+                    'name' => 'Agreement',
+                    'recipients' => array(
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                            'signingOrder' => 1,
+                        ),
+                        array(
+                            'email' => 'bob@example.com',
+                            'name' => 'Bob Jones',
+                            'signingOrder' => 2,
+                        ),
+                    ),
+                ),
+            ),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        $recipients = $request->getJsonBody()['documents'][0]['recipients'];
+        self::assertSame(1, $recipients[0]['signingOrder']);
+        self::assertSame(2, $recipients[1]['signingOrder']);
+    }
+
+    public function testGetEnvelopeParsesRecipientSigningOrderAndActivatedAt(): void
+    {
+        $body = '{"id":"env_1","status":"in_progress","createdAt":"2024-02-13T15:56:12.607Z","documents":[{"sourceDocumentId":"doc_1","status":"pending","recipients":[{"email":"a@example.com","status":"pending","signingOrder":1,"activatedAt":"2024-02-13T15:56:12.607Z","fields":[]},{"email":"b@example.com","status":"pending","signingOrder":2,"fields":[]},{"email":"c@example.com","status":"pending","fields":[]}]}]}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $envelope = $client->getEnvelope('env_1');
+
+        $recipients = $envelope->getDocuments()[0]->getRecipients();
+        self::assertSame(1, $recipients[0]->getSigningOrder());
+        self::assertNotNull($recipients[0]->getActivatedAt());
+        self::assertSame('2024-02-13T15:56:12+00:00', $recipients[0]->getActivatedAt()->format(DATE_ATOM));
+        self::assertSame(2, $recipients[1]->getSigningOrder());
+        self::assertNull($recipients[1]->getActivatedAt());
+        self::assertNull($recipients[2]->getSigningOrder());
+        self::assertNull($recipients[2]->getActivatedAt());
+    }
+
     public function testGetEnvelopeParsesRecipientRecipientId(): void
     {
         $body = '{"id":"env_1","status":"in_progress","createdAt":"2024-02-13T15:56:12.607Z","documents":[{"sourceDocumentId":"doc_1","status":"pending","recipients":[{"email":"a@example.com","status":"pending","recipientId":"rcp_123","fields":[]},{"email":"b@example.com","status":"pending","fields":[]}]}]}';

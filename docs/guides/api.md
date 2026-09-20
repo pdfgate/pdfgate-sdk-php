@@ -31,7 +31,7 @@ $client->uploadFile([
 
 ## Create Envelope
 
-`createEnvelope()` sends JSON with nested envelope documents and recipients. Optional fields like `metadata` and recipient `role` are omitted automatically when set to `null`. Each recipient is given either as `email` and `name` or as the `recipientId` of a stored recipient (see [Create Recipient](#create-recipient)). Recipients marked `embedded` receive no email and get their signing links via `createEmbedLink()` after sending.
+`createEnvelope()` sends JSON with nested envelope documents and recipients. Optional fields like `metadata` and recipient `role` are omitted automatically when set to `null`. Each recipient is given either as `email` and `name` or as the `recipientId` of a stored recipient (see [Create Recipient](#create-recipient)). Recipients marked `embedded` receive no email and get their signing links via `createEmbedLink()` after sending. Optional `signingOrder` (given for every recipient of a document or for none) makes recipients sign one after another: each recipient is activated — and emailed their signing link — once everyone with a lower value has signed, and the `envelope.recipient.activated` webhook event fires at that moment.
 
 ```php
 $envelope = $client->createEnvelope([
@@ -44,6 +44,12 @@ $envelope = $client->createEnvelope([
                 [
                     'email' => 'anna@example.com',
                     'name' => 'Anna Smith',
+                    'signingOrder' => 1,
+                ],
+                [
+                    'email' => 'bob@example.com',
+                    'name' => 'Bob Jones',
+                    'signingOrder' => 2,
                 ],
             ],
         ],
