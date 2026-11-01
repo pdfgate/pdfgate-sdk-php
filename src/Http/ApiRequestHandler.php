@@ -170,6 +170,29 @@ class ApiRequestHandler
     }
 
     /**
+     * Sends a DELETE request and parses a JSON response.
+     *
+     * @param string $path Endpoint path.
+     * @return array<string,mixed>
+     */
+    public function deleteJson(string $path): array
+    {
+        $url = (new UrlBuilder())
+            ->withDomain($this->baseUrl)
+            ->withPath($path)
+            ->build();
+        $request = HttpRequest::makeDelete(
+            $url,
+            $this->authHeaders(),
+            $this->resolveTimeoutForPath($path)
+        );
+
+        $response = $this->send($request);
+
+        return $this->decodeJsonResponse($response->body);
+    }
+
+    /**
      * Sends a GET request and returns the raw response body.
      *
      * @param string $path Endpoint path.

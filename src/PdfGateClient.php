@@ -245,6 +245,21 @@ class PdfGateClient
      * the same value can sign in parallel. Provide it for every recipient of a
      * document or for none. Omitted, all recipients can sign immediately.
      *
+     * autoSign applies the stored signature of the referenced recipient on
+     * their behalf when their turn to sign comes, with no signing session or
+     * email. Requires recipientId pointing to a recipient with an active stored
+     * signature (see requestRecipientSignature()) and cannot be combined with
+     * embedded. Every required field of the recipient must already have a
+     * value before the document is sent, except signature and auto-filled date
+     * fields. If the stored signature is removed before the turn comes, a
+     * signing link is emailed instead. The audit log records the automatic
+     * signature with the enrolment details.
+     *
+     * sendSignedCopy controls whether the recipient is emailed the signed
+     * document when the document completes. Defaults to true for recipients
+     * who sign through the emailed signing link and false for embedded and
+     * automatic signing recipients.
+     *
      * @param CreateEnvelopeRequestPayload $request Create envelope request payload.
      * @return PdfGateEnvelope
      */
@@ -471,6 +486,79 @@ class PdfGateClient
         $response = $this->requestHandler->patchJson(
             '/recipient/' . rawurlencode($recipientId),
             $request
+        );
+
+        return PdfGateRecipient::fromArray($response);
+    }
+
+    /**
+     * Deletes a stored recipient.
+     *
+     * The record is kept with its personal data removed, so later reads
+     * return 404 and a new envelope to the same address creates a fresh
+     * recipient. Envelopes already sent are not affected. A recipient with an
+     * active stored signature or a pending enrolment cannot be deleted: call
+     * removeRecipientSignature() first.
+     *
+     * @param string $recipientId Existing recipient ID.
+     */
+    public function deleteRecipient(string $recipientId): void
+    {
+        if (trim($recipientId) === '') {
+            throw new InvalidArgumentException('Recipient ID cannot be empty.');
+        }
+
+        $this->requestHandler->delete('/recipient/' . rawurlencode($recipientId));
+    }
+
+    /**
+     * Automatic signing: emails the recipient a link to store a reusable
+     * signature.
+     *
+     * The recipient verifies their email with a one-time code, accepts the
+     * authorization text and types, draws or uploads their signature. The link
+     * is valid for 7 days; calling this again replaces a pending request. Once
+     * the enrolment is complete the recipient.signature.enrolled webhook fires
+     * and envelopes can set autoSign on this recipient. Rejected when the
+     * recipient has no email or already has an active stored signature.
+     *
+     * @param string $recipientId Existing recipient ID.
+     * @return PdfGateRecipient The recipient with signature status pending.
+     */
+    public function requestRecipientSignature(string $recipientId): PdfGateRecipient
+    {
+        if (trim($recipientId) === '') {
+            throw new InvalidArgumentException('Recipient ID cannot be empty.');
+        }
+
+        $response = $this->requestHandler->postJson(
+            '/recipient/' . rawurlencode($recipientId) . '/signature/request',
+            array()
+        );
+
+        return PdfGateRecipient::fromArray($response);
+    }
+
+    /**
+     * Automatic signing: removes the stored signature of a recipient, or
+     * cancels a pending enrolment.
+     *
+     * Envelopes already waiting on an automatic signature fall back to a
+     * signing link emailed to the recipient. Removing an active signature
+     * fires the recipient.signature.revoked webhook. Idempotent: a recipient
+     * without a stored signature is returned unchanged.
+     *
+     * @param string $recipientId Existing recipient ID.
+     * @return PdfGateRecipient
+     */
+    public function removeRecipientSignature(string $recipientId): PdfGateRecipient
+    {
+        if (trim($recipientId) === '') {
+            throw new InvalidArgumentException('Recipient ID cannot be empty.');
+        }
+
+        $response = $this->requestHandler->deleteJson(
+            '/recipient/' . rawurlencode($recipientId) . '/signature'
         );
 
         return PdfGateRecipient::fromArray($response);

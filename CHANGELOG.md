@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `signingOrder` on envelope creation recipients to make recipients sign one after another.
 - `getSigningOrder()` and `getActivatedAt()` on `EnvelopeRecipientResponse`.
 - `ENVELOPE_RECIPIENT_ACTIVATED` webhook event type, fired when it becomes a recipient's turn to sign on a document with a signing order.
+- `deleteRecipient()` to remove a stored recipient's personal data from the directory.
+- Automatic signing: `requestRecipientSignature()` and `removeRecipientSignature()`, plus the `RecipientStoredSignature` DTO (`getSignature()` on `PdfGateRecipient`) and the `StoredSignatureStatus` / `SignatureAdoptionMethod` enums.
+- `autoSign` and `sendSignedCopy` on envelope creation recipients; `isAutoSign()` and `isSendSignedCopy()` on `EnvelopeRecipientResponse`.
+- `RECIPIENT_SIGNATURE_ENROLLED` and `RECIPIENT_SIGNATURE_REVOKED` webhook event types.
 
 ## [1.0.0] - 2026-08-03
 

@@ -158,7 +158,9 @@ namespace PdfGate\Type;
  *   reminderIntervalDays?: int,
  *   reminderAttempts?: int,
  *   embedded?: bool,
- *   signingOrder?: int
+ *   signingOrder?: int,
+ *   autoSign?: bool,
+ *   sendSignedCopy?: bool
  * }
  * @phpstan-type EnvelopeDocumentPayload array{
  *   sourceDocumentId: string,

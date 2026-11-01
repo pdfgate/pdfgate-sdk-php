@@ -227,6 +227,42 @@ final class ApiRequestHandlerTest extends TestCase
         self::assertSame('completed', $result['status']);
     }
 
+    public function testDeleteJsonSendsDeleteRequestWithoutBodyAndDecodesJsonObjectResponse(): void
+    {
+        $transport = new RecordingResponseTransport(new HttpResponse(200, '{"id":"rcp_123","signature":{"status":"revoked"}}'));
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            $transport
+        );
+
+        $result = $handler->deleteJson('/recipient/rcp_123/signature');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('DELETE', $request->getMethod());
+        self::assertSame('https://api.pdfgate.com/recipient/rcp_123/signature', $request->getUrl());
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertNull($request->getJsonBody());
+        self::assertNull($request->getMultipartBody());
+        self::assertSame(60, $request->getTimeout());
+        self::assertSame('rcp_123', $result['id']);
+        self::assertSame(array('status' => 'revoked'), $result['signature']);
+    }
+
+    public function testDeleteJsonThrowsApiExceptionOnNonSuccessStatusCode(): void
+    {
+        $handler = new ApiRequestHandler(
+            'https://api.pdfgate.com',
+            'test_key_123',
+            new StaticResponseTransport(new HttpResponse(404, '{"message":"Recipient not found"}'))
+        );
+
+        $this->expectException(ApiException::class);
+
+        $handler->deleteJson('/recipient/rcp_missing/signature');
+    }
+
     public function testGetBinaryResponseSendsGetRequestAndReturnsRawBody(): void
     {
         $transport = new RecordingResponseTransport(new HttpResponse(200, '%PDF-1.7 binary'));
