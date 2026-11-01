@@ -61,7 +61,9 @@ jobs:
           path: build/docs/site
 
   deploy:
-    if: github.event_name != 'pull_request'
+    # The github-pages environment only accepts deployments from main, so tag
+    # pushes build the site (link check included) but do not deploy it.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
