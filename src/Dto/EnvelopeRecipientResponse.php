@@ -47,6 +47,12 @@ class EnvelopeRecipientResponse
     /** @var DateTimeImmutable|null */
     private $activatedAt;
 
+    /** @var bool Whether the recipient is signed automatically with their stored signature. */
+    private $autoSign;
+
+    /** @var bool Whether the recipient is emailed the signed document when the document completes. */
+    private $sendSignedCopy;
+
     /**
      * @param list<EnvelopeFieldResponse> $fields
      * @param string $status One of the DocumentRecipientStatus constants.
@@ -62,7 +68,9 @@ class EnvelopeRecipientResponse
         ?string $recipientId = null,
         bool $embedded = false,
         ?int $signingOrder = null,
-        ?DateTimeImmutable $activatedAt = null
+        ?DateTimeImmutable $activatedAt = null,
+        bool $autoSign = false,
+        bool $sendSignedCopy = false
     ) {
         $this->email = $email;
         $this->status = $status;
@@ -75,6 +83,8 @@ class EnvelopeRecipientResponse
         $this->embedded = $embedded;
         $this->signingOrder = $signingOrder;
         $this->activatedAt = $activatedAt;
+        $this->autoSign = $autoSign;
+        $this->sendSignedCopy = $sendSignedCopy;
     }
 
     /**
@@ -122,7 +132,9 @@ class EnvelopeRecipientResponse
             array_key_exists('signingOrder', $payload) && $payload['signingOrder'] !== null
                 ? (int) $payload['signingOrder']
                 : null,
-            self::parseOptionalDate($payload, 'activatedAt', 'envelope recipient response')
+            self::parseOptionalDate($payload, 'activatedAt', 'envelope recipient response'),
+            array_key_exists('autoSign', $payload) ? (bool) $payload['autoSign'] : false,
+            array_key_exists('sendSignedCopy', $payload) ? (bool) $payload['sendSignedCopy'] : false
         );
     }
 
@@ -209,6 +221,25 @@ class EnvelopeRecipientResponse
     public function getActivatedAt(): ?DateTimeImmutable
     {
         return $this->activatedAt;
+    }
+
+    /**
+     * Whether the recipient is signed automatically with their stored
+     * signature (automatic signing). Automatic signing recipients receive no
+     * signing email and have no signing session.
+     */
+    public function isAutoSign(): bool
+    {
+        return $this->autoSign;
+    }
+
+    /**
+     * Whether the recipient is emailed the signed document when the document
+     * completes.
+     */
+    public function isSendSignedCopy(): bool
+    {
+        return $this->sendSignedCopy;
     }
 
     /**

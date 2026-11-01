@@ -13,6 +13,8 @@ use PdfGate\Enum\DocumentFieldType;
 use PdfGate\Enum\DocumentRecipientStatus;
 use PdfGate\Enum\EnvelopeDocumentStatus;
 use PdfGate\Enum\EnvelopeStatus;
+use PdfGate\Enum\SignatureAdoptionMethod;
+use PdfGate\Enum\StoredSignatureStatus;
 use PdfGate\Enum\WebhookEventType;
 use PdfGate\Enum\WebhookStatus;
 use PdfGate\Exception\ApiException;
@@ -1212,6 +1214,211 @@ final class PdfGateClientTest extends TestCase
         $this->expectExceptionMessage('Recipient ID cannot be empty.');
 
         $client->updateRecipient('', array('name' => 'Anna Smith'));
+    }
+
+    public function testDeleteRecipientSendsDeleteRequestWithoutBody(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(204, ''));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $client->deleteRecipient('rcp_123');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('DELETE', $request->getMethod());
+        self::assertSame('/recipient/rcp_123', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertNull($request->getJsonBody());
+        self::assertNull($request->getMultipartBody());
+    }
+
+    public function testDeleteRecipientRejectsEmptyRecipientId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(204, ''));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Recipient ID cannot be empty.');
+
+        $client->deleteRecipient('   ');
+    }
+
+    public function testRequestRecipientSignaturePostsWithEmptyBodyAndParsesPendingSignature(): void
+    {
+        $body = '{"id":"rcp_123","email":"anna@example.com","name":"Anna Smith","createdAt":"2026-01-01T00:00:00.000Z","signature":{"status":"pending","requestedAt":"2026-01-03T00:00:00.000Z","useCount":0}}';
+        $transport = new RecordingTransport(new HttpResponse(201, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->requestRecipientSignature('rcp_123');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('POST', $request->getMethod());
+        self::assertSame('/recipient/rcp_123/signature/request', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame(array(), $request->getJsonBody());
+
+        self::assertInstanceOf(PdfGateRecipient::class, $response);
+        self::assertSame('rcp_123', $response->getId());
+        $signature = $response->getSignature();
+        self::assertNotNull($signature);
+        self::assertSame(StoredSignatureStatus::PENDING, $signature->getStatus());
+        self::assertNotNull($signature->getRequestedAt());
+        self::assertSame('2026-01-03T00:00:00+00:00', $signature->getRequestedAt()->format(DATE_ATOM));
+        self::assertSame(0, $signature->getUseCount());
+        self::assertNull($signature->getAdoptionMethod());
+        self::assertNull($signature->getEnrolledAt());
+        self::assertNull($signature->getRevokedAt());
+        self::assertNull($signature->getLastUsedAt());
+        self::assertNull($signature->getImage());
+    }
+
+    public function testRequestRecipientSignatureRejectsEmptyRecipientId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(201, $this->successfulRecipientResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Recipient ID cannot be empty.');
+
+        $client->requestRecipientSignature('');
+    }
+
+    public function testGetRecipientParsesActiveStoredSignatureWithImage(): void
+    {
+        $body = '{"id":"rcp_123","email":"anna@example.com","createdAt":"2026-01-01T00:00:00.000Z","signature":{"status":"active","requestedAt":"2026-01-03T00:00:00.000Z","adoptionMethod":"type_signature","enrolledAt":"2026-01-04T00:00:00.000Z","lastUsedAt":"2026-01-05T00:00:00.000Z","useCount":2,"image":"data:image/png;base64,AAAA"}}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->getRecipient('rcp_123');
+
+        $signature = $response->getSignature();
+        self::assertNotNull($signature);
+        self::assertSame(StoredSignatureStatus::ACTIVE, $signature->getStatus());
+        self::assertSame(SignatureAdoptionMethod::TYPE_SIGNATURE, $signature->getAdoptionMethod());
+        self::assertNotNull($signature->getRequestedAt());
+        self::assertNotNull($signature->getEnrolledAt());
+        self::assertSame('2026-01-04T00:00:00+00:00', $signature->getEnrolledAt()->format(DATE_ATOM));
+        self::assertNotNull($signature->getLastUsedAt());
+        self::assertSame('2026-01-05T00:00:00+00:00', $signature->getLastUsedAt()->format(DATE_ATOM));
+        self::assertNull($signature->getRevokedAt());
+        self::assertSame(2, $signature->getUseCount());
+        self::assertSame('data:image/png;base64,AAAA', $signature->getImage());
+    }
+
+    public function testGetRecipientWithoutSignatureReturnsNullSignature(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulRecipientResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->getRecipient('rcp_123');
+
+        self::assertNull($response->getSignature());
+    }
+
+    public function testGetRecipientRejectsSignatureThatIsNotAnObject(): void
+    {
+        $body = '{"id":"rcp_123","email":"anna@example.com","signature":"active"}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(TransportException::class);
+        $this->expectExceptionMessage('Expected "signature" to be an object in recipient response.');
+
+        $client->getRecipient('rcp_123');
+    }
+
+    public function testRemoveRecipientSignatureSendsDeleteAndParsesRevokedSignature(): void
+    {
+        $body = '{"id":"rcp_123","email":"anna@example.com","createdAt":"2026-01-01T00:00:00.000Z","signature":{"status":"revoked","revokedAt":"2026-01-06T00:00:00.000Z","useCount":2}}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $response = $client->removeRecipientSignature('rcp_123');
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        self::assertSame('DELETE', $request->getMethod());
+        self::assertSame('/recipient/rcp_123/signature', parse_url($request->getUrl(), PHP_URL_PATH));
+        self::assertSame('Bearer test_key_123', $request->getHeaders()['Authorization']);
+        self::assertNull($request->getJsonBody());
+
+        self::assertInstanceOf(PdfGateRecipient::class, $response);
+        self::assertSame('rcp_123', $response->getId());
+        $signature = $response->getSignature();
+        self::assertNotNull($signature);
+        self::assertSame(StoredSignatureStatus::REVOKED, $signature->getStatus());
+        self::assertNotNull($signature->getRevokedAt());
+        self::assertSame('2026-01-06T00:00:00+00:00', $signature->getRevokedAt()->format(DATE_ATOM));
+        self::assertSame(2, $signature->getUseCount());
+        self::assertNull($signature->getImage());
+    }
+
+    public function testRemoveRecipientSignatureRejectsEmptyRecipientId(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulRecipientResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Recipient ID cannot be empty.');
+
+        $client->removeRecipientSignature('   ');
+    }
+
+    public function testCreateEnvelopeForwardsAutoSignAndSendSignedCopyAndParsesThemBack(): void
+    {
+        $body = '{"id":"env_1","status":"created","createdAt":"2026-01-01T00:00:00.000Z","documents":[{"sourceDocumentId":"doc_1","status":"pending","recipients":[{"recipientId":"rcp_123","email":"ceo@example.com","embedded":false,"autoSign":true,"sendSignedCopy":false,"status":"pending","fields":[]},{"email":"anna@example.com","status":"pending","autoSign":false,"sendSignedCopy":true,"fields":[]}]}]}';
+        $transport = new RecordingTransport(new HttpResponse(201, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $envelope = $client->createEnvelope(array(
+            'requesterName' => 'HR',
+            'documents' => array(
+                array(
+                    'sourceDocumentId' => 'doc_1',
+                    'name' => 'Contract',
+                    'recipients' => array(
+                        array(
+                            'recipientId' => 'rcp_123',
+                            'role' => 'ceo',
+                            'autoSign' => true,
+                            'sendSignedCopy' => false,
+                        ),
+                        array(
+                            'email' => 'anna@example.com',
+                            'name' => 'Anna Smith',
+                            'role' => 'employee',
+                        ),
+                    ),
+                ),
+            ),
+        ));
+
+        $request = $transport->lastRequest;
+        self::assertNotNull($request);
+        $sentRecipients = $request->getJsonBody()['documents'][0]['recipients'];
+        self::assertTrue($sentRecipients[0]['autoSign']);
+        self::assertFalse($sentRecipients[0]['sendSignedCopy']);
+        self::assertArrayNotHasKey('autoSign', $sentRecipients[1]);
+        self::assertArrayNotHasKey('sendSignedCopy', $sentRecipients[1]);
+
+        $recipients = $envelope->getDocuments()[0]->getRecipients();
+        self::assertTrue($recipients[0]->isAutoSign());
+        self::assertFalse($recipients[0]->isSendSignedCopy());
+        self::assertFalse($recipients[0]->isEmbedded());
+        self::assertFalse($recipients[1]->isAutoSign());
+        self::assertTrue($recipients[1]->isSendSignedCopy());
+    }
+
+    public function testGetEnvelopeDefaultsAutoSignAndSendSignedCopyToFalseWhenAbsent(): void
+    {
+        $transport = new RecordingTransport(new HttpResponse(200, $this->successfulSendEnvelopeResponseBody()));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $envelope = $client->getEnvelope('69c0fa44f83ca6a7015f1c8c');
+
+        $recipient = $envelope->getDocuments()[0]->getRecipients()[0];
+        self::assertFalse($recipient->isAutoSign());
+        self::assertFalse($recipient->isSendSignedCopy());
     }
 
     private function successfulAddFormFieldsResponseBody(): string

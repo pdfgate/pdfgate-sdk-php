@@ -12,6 +12,7 @@ PDFGate lets you generate, process, and secure PDFs via a simple API:
 - Create signing envelopes from source documents
 - Embedded signing inside your own application
 - Store and reuse recipients across envelopes
+- Automatic signing with a recipient's stored signature
 - Flatten (all or specific fields), compress, watermark, protect PDFs
 - Extract PDF form data
 - Delete stored documents
@@ -76,7 +77,7 @@ $client->uploadFile([
 
 ### Create Envelope
 
-Each recipient is given either as `email` and `name` or as the `recipientId` of a stored recipient (see [Manage Recipients](#manage-recipients)). Recipients marked `embedded` receive no email and get their signing links via `createEmbedLink()` after sending (see [Embedded Signing](#embedded-signing)). Optional `signingOrder` (given for every recipient of a document or for none) makes recipients sign one after another: each recipient is activated — and emailed their signing link — once everyone with a lower value has signed, and the `envelope.recipient.activated` webhook event fires at that moment.
+Each recipient is given either as `email` and `name` or as the `recipientId` of a stored recipient (see [Manage Recipients](#manage-recipients)). Recipients marked `embedded` receive no email and get their signing links via `createEmbedLink()` after sending (see [Embedded Signing](#embedded-signing)). Optional `signingOrder` (given for every recipient of a document or for none) makes recipients sign one after another: each recipient is activated — and emailed their signing link — once everyone with a lower value has signed, and the `envelope.recipient.activated` webhook event fires at that moment. Optional `autoSign` applies the stored signature of the referenced recipient on their behalf when their turn to sign comes, with no signing session or email (see [Automatic Signing](#automatic-signing)). Optional `sendSignedCopy` controls whether the recipient is emailed the signed document when the document completes; it defaults to `true` for recipients who sign through the emailed signing link and `false` for embedded and automatic signing recipients.
 
 ```php
 use PdfGate\Enum\EnvelopeStatus;
@@ -216,7 +217,65 @@ $fetched = $client->getRecipient($recipient->getId());
 $updated = $client->updateRecipient($recipient->getId(), [
     'name' => 'Anna Jones',
 ]);
+
+// Removes the recipient's personal data from the directory; envelopes
+// already sent are not affected. A recipient with an active stored
+// signature or a pending enrolment cannot be deleted until the signature
+// is removed (see Automatic Signing).
+$client->deleteRecipient($recipient->getId());
 ```
+
+### Automatic Signing
+
+A recipient can store a reusable signature once, and later envelopes apply it on their behalf with no signing session. Request the enrolment, and PDFGate emails the recipient a link where they verify their email with a one-time code, accept the authorization text and type, draw or upload their signature. The link is valid for 7 days; calling `requestRecipientSignature()` again replaces a pending request.
+
+```php
+use PdfGate\Enum\StoredSignatureStatus;
+
+$pending = $client->requestRecipientSignature($recipient->getId());
+echo $pending->getSignature()->getStatus(); // "pending"
+
+// Once the recipient completes the enrolment (webhook event
+// `recipient.signature.enrolled`), the signature is active.
+$enrolled = $client->getRecipient($recipient->getId());
+$signature = $enrolled->getSignature();
+if ($signature !== null && $signature->getStatus() === StoredSignatureStatus::ACTIVE) {
+    echo $signature->getImage(); // PNG data URL
+}
+
+// Sign automatically: the recipient is signed at send, or when their turn
+// in the signing order comes. No signing email is sent.
+$envelope = $client->createEnvelope([
+    'requesterName' => 'HR',
+    'documents' => [
+        [
+            'sourceDocumentId' => '6642381c5c61',
+            'name' => 'Employment Agreement',
+            'recipients' => [
+                [
+                    'email' => 'anna@example.com',
+                    'name' => 'Anna Smith',
+                    'role' => 'employee',
+                    'signingOrder' => 1,
+                ],
+                [
+                    'recipientId' => $recipient->getId(),
+                    'role' => 'ceo',
+                    'signingOrder' => 2,
+                    'autoSign' => true,
+                ],
+            ],
+        ],
+    ],
+]);
+
+// Remove the stored signature or cancel a pending enrolment.
+$client->removeRecipientSignature($recipient->getId());
+```
+
+`autoSign` requires `recipientId` pointing to a recipient with an active stored signature and cannot be combined with `embedded`. Every required field of the recipient must already have a value before the document is sent, except signature and auto-filled date fields. If the stored signature is removed before the turn comes, a signing link is emailed instead. The audit log records every automatic signature with the enrolment details.
+
+The `RecipientStoredSignature` object returned by `getSignature()` carries `getStatus()` (`pending`, `active` or `revoked`, see `StoredSignatureStatus`), `getRequestedAt()`, `getAdoptionMethod()` (see `SignatureAdoptionMethod`), `getEnrolledAt()`, `getRevokedAt()`, `getLastUsedAt()` and `getUseCount()`. `getImage()` is set by `getRecipient()` only while the signature is active. Removing an active signature fires the `recipient.signature.revoked` webhook event, and envelopes already waiting on it fall back to a signing link emailed to the recipient.
 
 ### Download File
 
@@ -289,7 +348,7 @@ $fetched = $client->getWebhook($webhook->getId());
 $client->deleteWebhook($webhook->getId());
 ```
 
-For complete operation examples (`flattenPdf`, `addFormFields`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `deleteDocument`, `createEnvelope`, `sendEnvelope`, `getEnvelope`, `createEmbedLink`, `createRecipient`, `listRecipients`, `getRecipient`, `updateRecipient`, `createWebhook`, `getWebhook`, `deleteWebhook`), see [API](docs/guides/api.md).
+For complete operation examples (`flattenPdf`, `addFormFields`, `compressPdf`, `protectPdf`, `watermarkPdf`, `extractPdfFormData`, `getDocument`, `deleteDocument`, `createEnvelope`, `sendEnvelope`, `getEnvelope`, `createEmbedLink`, `createRecipient`, `listRecipients`, `getRecipient`, `updateRecipient`, `deleteRecipient`, `requestRecipientSignature`, `removeRecipientSignature`, `createWebhook`, `getWebhook`, `deleteWebhook`), see [API](docs/guides/api.md).
 
 To download generated files, enable **Save files for one month** in PDFGate Dashboard settings.
 

@@ -34,6 +34,9 @@ class PdfGateRecipient
     /** @var DateTimeImmutable|null */
     private $lastUsedAt;
 
+    /** @var RecipientStoredSignature|null */
+    private $signature;
+
     /**
      * @param array<string,mixed>|null $metadata
      */
@@ -44,7 +47,8 @@ class PdfGateRecipient
         ?array $metadata = null,
         ?DateTimeImmutable $createdAt = null,
         ?DateTimeImmutable $updatedAt = null,
-        ?DateTimeImmutable $lastUsedAt = null
+        ?DateTimeImmutable $lastUsedAt = null,
+        ?RecipientStoredSignature $signature = null
     ) {
         $this->id = $id;
         $this->email = $email;
@@ -53,6 +57,7 @@ class PdfGateRecipient
         $this->createdAt = $createdAt;
         $this->updatedAt = $updatedAt;
         $this->lastUsedAt = $lastUsedAt;
+        $this->signature = $signature;
     }
 
     /**
@@ -72,6 +77,15 @@ class PdfGateRecipient
             throw new TransportException('Expected "metadata" to be an object in recipient response.');
         }
 
+        $signature = null;
+        if (array_key_exists('signature', $payload) && $payload['signature'] !== null) {
+            if (!is_array($payload['signature'])) {
+                throw new TransportException('Expected "signature" to be an object in recipient response.');
+            }
+
+            $signature = RecipientStoredSignature::fromArray($payload['signature']);
+        }
+
         return new self(
             (string) $payload['id'],
             (string) $payload['email'],
@@ -81,7 +95,8 @@ class PdfGateRecipient
             array_key_exists('metadata', $payload) ? $payload['metadata'] : null,
             self::parseOptionalDate($payload, 'createdAt'),
             self::parseOptionalDate($payload, 'updatedAt'),
-            self::parseOptionalDate($payload, 'lastUsedAt')
+            self::parseOptionalDate($payload, 'lastUsedAt'),
+            $signature
         );
     }
 
@@ -127,6 +142,16 @@ class PdfGateRecipient
     public function getLastUsedAt(): ?DateTimeImmutable
     {
         return $this->lastUsedAt;
+    }
+
+    /**
+     * Automatic signing. The stored signature of the recipient or the state
+     * of its enrolment. Null until an enrolment was requested with
+     * requestRecipientSignature().
+     */
+    public function getSignature(): ?RecipientStoredSignature
+    {
+        return $this->signature;
     }
 
     /**

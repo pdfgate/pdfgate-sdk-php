@@ -24,6 +24,18 @@ final class WebhookEventType
     public const ENVELOPE_RECIPIENT_ACTIVATED = 'envelope.recipient.activated';
     public const ENVELOPE_DOCUMENT_COMPLETED = 'envelope.document.completed';
 
+    /**
+     * Occurs when a recipient completes the enrolment of a stored signature
+     * (automatic signing). Payload: recipientId, enrolledAt, adoptionMethod.
+     */
+    public const RECIPIENT_SIGNATURE_ENROLLED = 'recipient.signature.enrolled';
+
+    /**
+     * Occurs when an active stored signature is removed from a recipient.
+     * Payload: recipientId, revokedAt.
+     */
+    public const RECIPIENT_SIGNATURE_REVOKED = 'recipient.signature.revoked';
+
     private function __construct()
     {
     }

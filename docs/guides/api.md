@@ -31,7 +31,7 @@ $client->uploadFile([
 
 ## Create Envelope
 
-`createEnvelope()` sends JSON with nested envelope documents and recipients. Optional fields like `metadata` and recipient `role` are omitted automatically when set to `null`. Each recipient is given either as `email` and `name` or as the `recipientId` of a stored recipient (see [Create Recipient](#create-recipient)). Recipients marked `embedded` receive no email and get their signing links via `createEmbedLink()` after sending. Optional `signingOrder` (given for every recipient of a document or for none) makes recipients sign one after another: each recipient is activated — and emailed their signing link — once everyone with a lower value has signed, and the `envelope.recipient.activated` webhook event fires at that moment.
+`createEnvelope()` sends JSON with nested envelope documents and recipients. Optional fields like `metadata` and recipient `role` are omitted automatically when set to `null`. Each recipient is given either as `email` and `name` or as the `recipientId` of a stored recipient (see [Create Recipient](#create-recipient)). Recipients marked `embedded` receive no email and get their signing links via `createEmbedLink()` after sending. Optional `signingOrder` (given for every recipient of a document or for none) makes recipients sign one after another: each recipient is activated — and emailed their signing link — once everyone with a lower value has signed, and the `envelope.recipient.activated` webhook event fires at that moment. Optional `autoSign` applies the stored signature of the referenced recipient on their behalf when their turn to sign comes, with no signing session or email; it requires `recipientId` pointing to a recipient with an active stored signature (see [Request Recipient Signature](#request-recipient-signature)) and cannot be combined with `embedded`. Optional `sendSignedCopy` controls whether the recipient is emailed the signed document when the document completes; it defaults to `true` for recipients who sign through the emailed signing link and `false` for embedded and automatic signing recipients.
 
 ```php
 $envelope = $client->createEnvelope([
@@ -140,6 +140,34 @@ $recipient = $client->getRecipient('rcp_1a2b3c4d5e6f');
 $updated = $client->updateRecipient('rcp_1a2b3c4d5e6f', [
     'name' => 'Anna Jones',
 ]);
+```
+
+## Delete Recipient
+
+`deleteRecipient()` deletes a stored recipient. The record is kept with its personal data removed, so later reads return 404 and a new envelope to the same address creates a fresh recipient. Envelopes already sent are not affected. A recipient with an active stored signature or a pending enrolment cannot be deleted: call `removeRecipientSignature()` first.
+
+```php
+$client->deleteRecipient('rcp_1a2b3c4d5e6f');
+```
+
+## Request Recipient Signature
+
+`requestRecipientSignature()` starts automatic signing for a recipient: PDFGate emails them a link to store a reusable signature. The recipient verifies their email with a one-time code, accepts the authorization text and types, draws or uploads their signature. The link is valid for 7 days; calling this again replaces a pending request. Once the enrolment is complete the `recipient.signature.enrolled` webhook event fires and envelopes can set `autoSign` on this recipient. Rejected when the recipient has no email or already has an active stored signature.
+
+```php
+$pending = $client->requestRecipientSignature('rcp_1a2b3c4d5e6f');
+
+echo $pending->getSignature()->getStatus(); // "pending"
+```
+
+The `RecipientStoredSignature` object returned by `getSignature()` carries `getStatus()` (`pending`, `active` or `revoked`, see `StoredSignatureStatus`), `getRequestedAt()`, `getAdoptionMethod()` (see `SignatureAdoptionMethod`), `getEnrolledAt()`, `getRevokedAt()`, `getLastUsedAt()` and `getUseCount()`. `getImage()` (a PNG data URL) is set by `getRecipient()` only while the signature is active. `getSignature()` is `null` until an enrolment was requested.
+
+## Remove Recipient Signature
+
+`removeRecipientSignature()` removes the stored signature of a recipient, or cancels a pending enrolment so its link stops working. Envelopes already waiting on an automatic signature fall back to a signing link emailed to the recipient. Removing an active signature fires the `recipient.signature.revoked` webhook event. Idempotent: a recipient without a stored signature is returned unchanged.
+
+```php
+$recipient = $client->removeRecipientSignature('rcp_1a2b3c4d5e6f');
 ```
 
 ## Flatten PDF
