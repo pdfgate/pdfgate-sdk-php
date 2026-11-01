@@ -20,6 +20,9 @@ class EnvelopeDocumentResponse
     /** @var string|null */
     private $signedDocumentId;
 
+    /** @var string|null */
+    private $auditLogDocumentId;
+
     /** @var list<EnvelopeRecipientResponse> */
     private $recipients;
 
@@ -38,13 +41,15 @@ class EnvelopeDocumentResponse
         ?string $signedDocumentId,
         array $recipients,
         string $status,
-        ?DateTimeImmutable $completedAt
+        ?DateTimeImmutable $completedAt,
+        ?string $auditLogDocumentId = null
     ) {
         $this->sourceDocumentId = $sourceDocumentId;
         $this->signedDocumentId = $signedDocumentId;
         $this->recipients = $recipients;
         $this->status = $status;
         $this->completedAt = $completedAt;
+        $this->auditLogDocumentId = $auditLogDocumentId;
     }
 
     /**
@@ -78,7 +83,8 @@ class EnvelopeDocumentResponse
             array_key_exists('signedDocumentId', $payload) ? (string) $payload['signedDocumentId'] : null,
             $recipients,
             (string) $payload['status'],
-            self::parseOptionalDate($payload, 'completedAt')
+            self::parseOptionalDate($payload, 'completedAt'),
+            array_key_exists('auditLogDocumentId', $payload) ? (string) $payload['auditLogDocumentId'] : null
         );
     }
 
@@ -90,6 +96,14 @@ class EnvelopeDocumentResponse
     public function getSignedDocumentId(): ?string
     {
         return $this->signedDocumentId;
+    }
+
+    /**
+     * Identifier of the audit log document, present once the document is completed.
+     */
+    public function getAuditLogDocumentId(): ?string
+    {
+        return $this->auditLogDocumentId;
     }
 
     /**
