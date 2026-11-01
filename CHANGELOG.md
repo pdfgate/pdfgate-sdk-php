@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic signing: `requestRecipientSignature()` and `removeRecipientSignature()`, plus the `RecipientStoredSignature` DTO (`getSignature()` on `PdfGateRecipient`) and the `StoredSignatureStatus` / `SignatureAdoptionMethod` enums.
 - `autoSign` and `sendSignedCopy` on envelope creation recipients; `isAutoSign()` and `isSendSignedCopy()` on `EnvelopeRecipientResponse`.
 - `RECIPIENT_SIGNATURE_ENROLLED` and `RECIPIENT_SIGNATURE_REVOKED` webhook event types.
+- `getAuditLogDocumentId()` on `EnvelopeDocumentResponse`, the audit log document created when a document completes.
 
 ## [1.0.0] - 2026-08-03
 

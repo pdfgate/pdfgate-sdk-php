@@ -610,6 +610,30 @@ final class PdfGateClientTest extends TestCase
         self::assertNull($recipients[2]->getActivatedAt());
     }
 
+    public function testGetEnvelopeParsesSignedAndAuditLogDocumentIds(): void
+    {
+        $body = '{"id":"env_1","status":"completed","createdAt":"2024-02-13T15:56:12.607Z","completedAt":"2024-02-14T10:00:00.000Z","documents":[{"sourceDocumentId":"doc_1","signedDocumentId":"doc_signed","auditLogDocumentId":"doc_audit","status":"completed","completedAt":"2024-02-14T10:00:00.000Z","recipients":[{"email":"a@example.com","status":"signed","fields":[]}]}]}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $document = $client->getEnvelope('env_1')->getDocuments()[0];
+
+        self::assertSame('doc_signed', $document->getSignedDocumentId());
+        self::assertSame('doc_audit', $document->getAuditLogDocumentId());
+    }
+
+    public function testGetEnvelopeLeavesAuditLogDocumentIdNullWhenAbsent(): void
+    {
+        $body = '{"id":"env_1","status":"in_progress","createdAt":"2024-02-13T15:56:12.607Z","documents":[{"sourceDocumentId":"doc_1","status":"pending","recipients":[{"email":"a@example.com","status":"pending","fields":[]}]}]}';
+        $transport = new RecordingTransport(new HttpResponse(200, $body));
+        $client = PdfGateClient::createWithTransport('test_key_123', $transport);
+
+        $document = $client->getEnvelope('env_1')->getDocuments()[0];
+
+        self::assertNull($document->getSignedDocumentId());
+        self::assertNull($document->getAuditLogDocumentId());
+    }
+
     public function testGetEnvelopeParsesRecipientRecipientId(): void
     {
         $body = '{"id":"env_1","status":"in_progress","createdAt":"2024-02-13T15:56:12.607Z","documents":[{"sourceDocumentId":"doc_1","status":"pending","recipients":[{"email":"a@example.com","status":"pending","recipientId":"rcp_123","fields":[]},{"email":"b@example.com","status":"pending","fields":[]}]}]}';
