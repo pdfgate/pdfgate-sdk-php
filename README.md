@@ -366,7 +366,7 @@ See [Error handling guide](docs/guides/error-handling.md) for patterns and retry
 
 ## Webhook Verification
 
-Use [WebhookSignatureVerifier](/Users/ferg/repos/pdfgate-sdk-php/src/Webhook/WebhookSignatureVerifier.php) to verify the `x-pdfgate-signature` header against the raw request body and your webhook secret.
+Use [WebhookSignatureVerifier](src/Webhook/WebhookSignatureVerifier.php) to verify the `x-pdfgate-signature` header against the raw request body and your webhook secret.
 
 ```php
 use PdfGate\Exception\SignatureVerificationException;
